@@ -61,4 +61,19 @@ async def init_db():
             )
         """)
 
+        # Agent Knowledge (RAG Document Store) Table
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS agent_knowledge (
+                id TEXT PRIMARY KEY,
+                agent_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                source_url TEXT,
+                chunk_content TEXT NOT NULL,
+                chunk_index INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_agent_knowledge_agent ON agent_knowledge(agent_id)")
+
         await db.commit()
+

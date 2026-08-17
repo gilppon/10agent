@@ -20,6 +20,7 @@ interface SidebarProps {
   onSelectTab: (tab: ActiveTab) => void;
   ollamaOnline: boolean;
   onAddAgent: (agent: Agent) => void;
+  onOpenTeamModal?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -29,7 +30,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
   ollamaOnline,
-  onAddAgent
+  onAddAgent,
+  onOpenTeamModal
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -194,11 +196,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Secondary Tools Navigation */}
-      <div style={{ padding: '0 14px 10px', display: 'flex', gap: '6px' }}>
+      <div style={{ padding: '0 14px 10px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         <button
           onClick={() => onSelectTab('models')}
           style={{
             flex: 1,
+            minWidth: '90px',
             padding: '6px 8px',
             borderRadius: '6px',
             border: '1px solid var(--border-glass)',
@@ -213,13 +216,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
             gap: '4px'
           }}
         >
-          <Cpu size={12} /> Ollama 두뇌 설정
+          <Cpu size={12} /> 두뇌 설정
+        </button>
+
+        <button
+          onClick={() => onSelectTab('integrations')}
+          style={{
+            flex: 1,
+            minWidth: '90px',
+            padding: '6px 8px',
+            borderRadius: '6px',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            background: activeTab === 'integrations' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.05)',
+            color: activeTab === 'integrations' ? '#10B981' : '#34D399',
+            fontSize: '11px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px'
+          }}
+        >
+          <Zap size={12} color="#10B981" /> 외부 연동
         </button>
 
         <button
           onClick={() => onSelectTab('workspace')}
           style={{
             flex: 1,
+            minWidth: '90px',
             padding: '6px 8px',
             borderRadius: '6px',
             border: '1px solid var(--border-glass)',
@@ -234,9 +260,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             gap: '4px'
           }}
         >
-          <FolderGit2 size={12} /> 산출물 저장소
+          <FolderGit2 size={12} /> 산출물
         </button>
       </div>
+
 
       {/* Agent Roster List Section */}
       <div style={{
@@ -245,9 +272,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          전문 에이전트 군단 ({agents.length})
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            전문 에이전트 ({agents.length})
+          </span>
+          {onOpenTeamModal && (
+            <button
+              onClick={onOpenTeamModal}
+              style={{
+                background: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(52, 211, 153, 0.3)',
+                borderRadius: '6px',
+                color: '#34D399',
+                fontSize: '10px',
+                padding: '2px 6px',
+                cursor: 'pointer',
+                fontWeight: 700
+              }}
+            >
+              🏢 팀 관리
+            </button>
+          )}
+        </div>
         <button
           onClick={() => setShowModal(true)}
           style={{
@@ -315,9 +361,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ fontWeight: 600, fontSize: '13px', color: '#F8FAFC', truncate: true }}>
+                  <div style={{ fontWeight: 600, fontSize: '13px', color: '#F8FAFC' }}>
                     {agent.name}
                   </div>
+
                   <span style={{
                     fontSize: '9px',
                     padding: '2px 5px',

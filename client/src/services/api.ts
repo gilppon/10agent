@@ -1,4 +1,4 @@
-import { Agent, Message, Session, ModelInfo, ArtifactFile } from '../types';
+import { Agent, Message, Session, ModelInfo, ArtifactFile, HardwareProfile, KnowledgeItem, KnowledgePreset } from '../types';
 
 const API_BASE = '/api';
 
@@ -27,6 +27,213 @@ export const api = {
 
   async getModels(): Promise<{ status: string; models: ModelInfo[]; base_url: string }> {
     const res = await fetch(`${API_BASE}/models`);
+    return await res.json();
+  },
+
+  async getHardwareProfile(): Promise<HardwareProfile> {
+    const res = await fetch(`${API_BASE}/hardware/profile`);
+    return await res.json();
+  },
+
+  async getHardwareRecommendations(): Promise<{
+    tier: string;
+    tier_name: string;
+    installed_sota: Array<{ role: string; name: string; cmd: string }>;
+    missing_sota: Array<{ role: string; name: string; cmd: string }>;
+    readiness_score: number;
+  }> {
+    const res = await fetch(`${API_BASE}/hardware/recommendations`);
+    return await res.json();
+  },
+
+  async autoAssignOptimalModels(): Promise<{ status: string; assigned_count: number; mapping: Record<string, string> }> {
+    const res = await fetch(`${API_BASE}/hardware/auto-assign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return await res.json();
+  },
+
+  async ingestKnowledge(agentId: string, queryOrUrl: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/knowledge/ingest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: agentId, query_or_url: queryOrUrl }),
+    });
+    return await res.json();
+  },
+
+  async getAgentKnowledge(agentId: string): Promise<{ agent_id: string; knowledge: KnowledgeItem[]; presets: KnowledgePreset[] }> {
+    const res = await fetch(`${API_BASE}/knowledge/${agentId}`);
+    return await res.json();
+  },
+
+  async deleteKnowledge(agentId: string, title: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/knowledge/${agentId}?title=${encodeURIComponent(title)}`, {
+      method: 'DELETE',
+    });
+    return await res.json();
+  },
+
+  async getKnowledgeGraph(): Promise<{
+    total_count: number;
+    categories: {
+      marketing: number;
+      coding: number;
+      design: number;
+      business: number;
+      general: number;
+    };
+    nodes: Array<{
+      id: string;
+      title: string;
+      agent_id: string;
+      category: string;
+      source_url: string;
+      chunk_preview: string;
+      created_at: string;
+    }>;
+    edges: Array<{
+      source: string;
+      target: string;
+      strength: number;
+      type: string;
+    }>;
+  }> {
+    const res = await fetch(`${API_BASE}/knowledge/graph`);
+    return await res.json();
+  },
+
+  async exportKnowledgeBackup(): Promise<any> {
+    const res = await fetch(`${API_BASE}/knowledge/backup/export`);
+    return await res.json();
+  },
+
+  async importKnowledgeBackup(data: any): Promise<any> {
+    const res = await fetch(`${API_BASE}/knowledge/backup/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  },
+
+  async syncGithubBackup(payload: {
+    repo_url: string;
+    github_token?: string;
+    branch?: string;
+    action: 'backup' | 'restore';
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE}/knowledge/backup/github`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  },
+
+  async injectStarterPack(): Promise<{
+    status: string;
+    injected_presets: number;
+    total_chunks: number;
+    categories: Record<string, number>;
+  }> {
+    const res = await fetch(`${API_BASE}/knowledge/starter-pack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return await res.json();
+  },
+
+  async synthesizeKnowledge(topic?: string): Promise<{
+    status: string;
+    message?: string;
+    model_used?: string;
+    total_chunks_analyzed?: number;
+    synthesis_result?: string;
+  }> {
+    const res = await fetch(`${API_BASE}/knowledge/synthesize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: topic || '전사 종합 전략' }),
+    });
+    return await res.json();
+  },
+
+  async triggerAutoScout(agentId?: string): Promise<{
+    status: string;
+    timestamp: string;
+    total_new_chunks: number;
+    agents_updated_count: number;
+    details: Array<{ agent_id: string; query: string; chunks_created?: number; title?: string; status: string }>;
+  }> {
+    const res = await fetch(`${API_BASE}/knowledge/auto-scout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: agentId }),
+    });
+    return await res.json();
+  },
+
+  async getAutoScoutStatus(): Promise<{
+    enabled: boolean;
+    schedule: string;
+    last_scout_time: string | null;
+    monitored_agents_count: number;
+  }> {
+    const res = await fetch(`${API_BASE}/knowledge/auto-scout/status`);
+    return await res.json();
+  },
+
+  async toggleAutoScout(enabled: boolean): Promise<{
+    enabled: boolean;
+    schedule: string;
+    last_scout_time: string | null;
+    monitored_agents_count: number;
+  }> {
+    const res = await fetch(`${API_BASE}/knowledge/auto-scout/toggle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    });
+    return await res.json();
+  },
+
+  async getTelegramConfig(): Promise<{
+    bot_token: string;
+    chat_id: string;
+    is_configured: boolean;
+    is_polling: boolean;
+  }> {
+    const res = await fetch(`${API_BASE}/telegram/config`);
+    return await res.json();
+  },
+
+  async saveTelegramConfig(botToken: string, chatId: string): Promise<{
+    status: string;
+    config: { bot_token: string; chat_id: string; is_configured: boolean; is_polling: boolean };
+  }> {
+    const res = await fetch(`${API_BASE}/telegram/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bot_token: botToken, chat_id: chatId }),
+    });
+    return await res.json();
+  },
+
+  async testTelegramMessage(): Promise<any> {
+    const res = await fetch(`${API_BASE}/telegram/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return await res.json();
+  },
+
+  async triggerTelegramScout(): Promise<any> {
+    const res = await fetch(`${API_BASE}/telegram/scout-now`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
     return await res.json();
   },
 

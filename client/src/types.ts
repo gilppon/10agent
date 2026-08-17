@@ -35,6 +35,49 @@ export interface ModelInfo {
   modified_at?: string;
   digest?: string;
   vram_tier?: string;
+  source?: string;
+  backend?: 'ollama' | 'lm_studio';
+}
+
+export interface HardwareProfile {
+  tier: string;
+  tier_name: string;
+  cpu: {
+    physical_cores: number;
+    logical_threads: number;
+    usage_percent: number;
+  };
+  ram: {
+    total_gb: number;
+    available_gb: number;
+    usage_percent: number;
+  };
+  gpu: {
+    has_gpu: boolean;
+    device_name: string;
+    total_vram_gb: number;
+    free_vram_gb: number;
+    cuda_version: string;
+  };
+  recommendations: {
+    llm_small: string;
+    llm_medium: string;
+    llm_large: string;
+    reasoning: string;
+    strategy: string;
+  };
+}
+
+export interface KnowledgeItem {
+  title: string;
+  source_url: string;
+  chunk_count: number;
+  created_at: string;
+}
+
+export interface KnowledgePreset {
+  title: string;
+  query: string;
 }
 
 export interface ArtifactFile {
@@ -45,4 +88,7 @@ export interface ArtifactFile {
   category: 'code' | 'document' | 'media' | 'other';
 }
 
-export type ActiveTab = 'chat' | 'roundtable' | 'pipelines' | 'models' | 'workspace';
+export type ActiveTab = 'chat' | 'roundtable' | 'pipelines' | 'models' | 'workspace' | 'integrations';
+
+
+

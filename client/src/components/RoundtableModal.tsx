@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Agent } from '../types';
 import { Users, Play, CheckSquare, Square, Sparkles, Copy, Check } from 'lucide-react';
 import { api } from '../services/api';
@@ -15,7 +15,12 @@ export const RoundtableModal: React.FC<RoundtableModalProps> = ({ agents, sessio
   const [meetingLogs, setMeetingLogs] = useState<Array<{ agent_id?: string; content: string; reasoning?: string }>>([]);
   const [currentSpeaker, setCurrentSpeaker] = useState<Agent | null>(null);
   const [currentSpeakerToken, setCurrentSpeakerToken] = useState('');
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [synthesisContent, setSynthesisContent] = useState('');
   const [copied, setCopied] = useState(false);
+  
+  const currentTokenRef = useRef('');
+  const synthesisRef = useRef('');
 
   const toggleAgent = (id: string) => {
     setSelectedAgentIds(prev => 
@@ -31,6 +36,9 @@ export const RoundtableModal: React.FC<RoundtableModalProps> = ({ agents, sessio
     setIsMeetingRunning(true);
     setMeetingLogs([]);
     setCurrentSpeakerToken('');
+    setSynthesisContent('');
+    currentTokenRef.current = '';
+    synthesisRef.current = '';
 
     api.streamRoundtable(
       { session_id: sessionId, topic: topic.trim(), agent_ids: selectedAgentIds },
@@ -39,24 +47,42 @@ export const RoundtableModal: React.FC<RoundtableModalProps> = ({ agents, sessio
           if (data.type === 'roundtable_speaker_start') {
             setCurrentSpeaker(data.agent);
             setCurrentSpeakerToken('');
+            currentTokenRef.current = '';
           } else if (data.type === 'token') {
-            setCurrentSpeakerToken(prev => prev + data.content);
+            currentTokenRef.current += data.content;
+            setCurrentSpeakerToken(currentTokenRef.current);
           } else if (data.type === 'roundtable_speaker_done') {
+            const finalContent = currentTokenRef.current;
             setMeetingLogs(prev => [...prev, {
               agent_id: data.agent_id,
-              content: currentSpeakerToken
+              content: finalContent
             }]);
             setCurrentSpeaker(null);
             setCurrentSpeakerToken('');
+            currentTokenRef.current = '';
+          } else if (data.type === 'roundtable_synthesis_start') {
+            setIsSynthesizing(true);
+            setSynthesisContent('');
+            synthesisRef.current = '';
+          } else if (data.type === 'roundtable_synthesis_token') {
+            synthesisRef.current += data.content;
+            setSynthesisContent(synthesisRef.current);
+          } else if (data.type === 'roundtable_synthesis_done') {
+            setIsSynthesizing(false);
+            setSynthesisContent(data.content || synthesisRef.current);
           }
         },
         onDone: () => {
           setIsMeetingRunning(false);
+          setIsSynthesizing(false);
           setCurrentSpeaker(null);
+          currentTokenRef.current = '';
         },
         onError: (err) => {
           console.error(err);
           setIsMeetingRunning(false);
+          setIsSynthesizing(false);
+          currentTokenRef.current = '';
         }
       }
     );
@@ -170,8 +196,9 @@ export const RoundtableModal: React.FC<RoundtableModalProps> = ({ agents, sessio
                   <div style={{ fontSize: '16px' }}>{ag.emoji}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '12px', fontWeight: 600, color: '#FFF' }}>{ag.name}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', truncate: true }}>{ag.role}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{ag.role}</div>
                   </div>
+
                   {isChecked ? <CheckSquare size={14} color="var(--accent-purple)" /> : <Square size={14} color="var(--text-muted)" />}
                 </div>
               );
@@ -263,6 +290,70 @@ export const RoundtableModal: React.FC<RoundtableModalProps> = ({ agents, sessio
               </div>
               <div style={{ fontSize: '13px', lineHeight: 1.6, color: '#E2E8F0', whiteSpace: 'pre-wrap' }}>
                 {currentSpeakerToken || <span style={{ color: 'var(--text-muted)' }}>생각 중...</span>}
+              </div>
+            </div>
+          )}
+
+          {/* 🏆 CEO Master Action Plan Synthesis Card */}
+          {(isSynthesizing || synthesisContent) && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(16, 185, 129, 0.12) 100%)',
+              border: '1.5px solid rgba(234, 179, 8, 0.5)',
+              borderRadius: '16px',
+              padding: '20px 24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '22px' }}>🧭</span>
+                  <div>
+                    <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#FACC15', margin: 0 }}>
+                      🏆 원탁회의 최종 CEO 총괄 종합 실행 계획서 (Master Action Plan)
+                    </h4>
+                    <span style={{ fontSize: '11px', color: '#94A3B8' }}>
+                      {isSynthesizing ? 'CEO가 전 부서의 독립 발언을 종합 분석하고 있습니다...' : '전사 총괄 최종 승인 완료'}
+                    </span>
+                  </div>
+                </div>
+                {synthesisContent && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(synthesisContent);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      background: 'rgba(234, 179, 8, 0.2)',
+                      border: '1px solid #FACC15',
+                      color: '#FACC15',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {copied ? <Check size={12} color="#FACC15" /> : <Copy size={12} />}
+                    마스터 플랜 복사
+                  </button>
+                )}
+              </div>
+              <div style={{
+                fontSize: '13px',
+                lineHeight: 1.7,
+                color: '#F8FAFC',
+                whiteSpace: 'pre-wrap',
+                background: 'rgba(0, 0, 0, 0.4)',
+                padding: '16px 20px',
+                borderRadius: '12px'
+              }}>
+                {synthesisContent || <span style={{ color: 'var(--text-muted)' }}>CEO가 마스터 플랜을 수립 중입니다...</span>}
               </div>
             </div>
           )}

@@ -8,6 +8,9 @@ interface HeaderProps {
   currentModel: string;
   onModelChange: (model: string) => void;
   onNewSession: () => void;
+  onOpenTeamModal?: () => void;
+  onOpenKnowledgeModal?: () => void;
+  onOpenTelegramModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,6 +19,9 @@ export const Header: React.FC<HeaderProps> = ({
   currentModel,
   onModelChange,
   onNewSession,
+  onOpenTeamModal,
+  onOpenKnowledgeModal,
+  onOpenTelegramModal,
 }) => {
   return (
     <header className="glass-header" style={{
@@ -104,6 +110,75 @@ export const Header: React.FC<HeaderProps> = ({
             ))}
           </select>
         </div>
+
+        {/* Knowledge Network Graph Modal Button */}
+        {onOpenKnowledgeModal && (
+          <button
+            onClick={onOpenKnowledgeModal}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(16, 185, 129, 0.2))',
+              border: '1px solid rgba(244, 114, 182, 0.4)',
+              color: '#F472B6',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(236, 72, 153, 0.2)'
+            }}
+          >
+            🧠 지식 네트워크
+          </button>
+        )}
+
+        {/* Telegram Remote HQ Button */}
+        {onOpenTelegramModal && (
+          <button
+            onClick={onOpenTelegramModal}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, rgba(0, 136, 204, 0.2), rgba(34, 211, 238, 0.2))',
+              border: '1px solid rgba(0, 136, 204, 0.4)',
+              color: '#38BDF8',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(0, 136, 204, 0.2)'
+            }}
+          >
+            📱 텔레그램 원격제어
+          </button>
+        )}
+
+        {/* My Team Dashboard Button */}
+        {onOpenTeamModal && (
+          <button
+            onClick={onOpenTeamModal}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.2))',
+              border: '1px solid rgba(52, 211, 153, 0.4)',
+              color: '#34D399',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.2)'
+            }}
+          >
+            🏢 내 AI 팀
+          </button>
+        )}
 
         {/* New Session Button */}
         <button

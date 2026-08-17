@@ -1,10 +1,8 @@
 @echo off
-chcp 65001 > nul
-echo ========================================================
-echo  🚀 Next-Agent Backend Engine Launching (FastAPI)
-echo ========================================================
-
 cd /d "%~dp0"
+echo ========================================================
+echo   Next-Agent Backend Engine Launching (FastAPI)
+echo ========================================================
 
 echo [1/2] Checking Python environment...
 python -m pip install -r server\requirements.txt --quiet
