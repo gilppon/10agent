@@ -1,61 +1,152 @@
 import os
+import re
 import shutil
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
-from server.config import ARTIFACTS_DIR
-from server.models.schemas import ArtifactFile
+from server.config import ARTIFACTS_DIR, BASE_DIR
+from server.models.schemas import ArtifactFile, AgentValidationResult
+
+class FileSecurityException(Exception):
+    """Raised when a path traversal or security violation is detected."""
+    pass
 
 class FileService:
-    def __init__(self, artifacts_dir: Path = ARTIFACTS_DIR):
-        self.artifacts_dir = artifacts_dir
+    def __init__(self, artifacts_dir: Path = ARTIFACTS_DIR, app_build_dir: Optional[Path] = None):
+        self.artifacts_dir = Path(artifacts_dir).resolve()
+        self.app_build_dir = Path(app_build_dir or (BASE_DIR / "app_build")).resolve()
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
+        self.app_build_dir.mkdir(parents=True, exist_ok=True)
+
+    def _sanitize_filename(self, filename: str) -> str:
+        """Sanitizes filename to prevent directory traversal."""
+        if '..' in filename or '/' in filename or '\\' in filename:
+            raise FileSecurityException(f"Path traversal detected in filename: {filename}")
+        cleaned = re.sub(r'[\r\n\t]', '', filename).strip()
+        if not cleaned or cleaned in ('.', '..'):
+            raise FileSecurityException(f"Invalid filename: {filename}")
+        return cleaned
+
+    def _validate_safe_path(self, target_path: Path, allowed_root: Path) -> Path:
+        """Ensures target_path stays strictly within allowed_root."""
+        resolved = target_path.resolve()
+        resolved_root = allowed_root.resolve()
+        try:
+            resolved.relative_to(resolved_root)
+        except ValueError:
+            raise FileSecurityException(
+                f"🚨 Path Traversal Blocked: '{resolved}' escapes allowed boundary '{resolved_root}'"
+            )
+        return resolved
 
     def list_artifacts(self) -> List[ArtifactFile]:
         files = []
         for p in self.artifacts_dir.rglob("*"):
             if p.is_file():
-                rel_path = str(p.relative_to(self.artifacts_dir)).replace("\\", "/")
-                stat = p.stat()
-                
-                # Determine category
-                ext = p.suffix.lower()
-                category = "other"
-                if ext in [".js", ".ts", ".tsx", ".jsx", ".py", ".html", ".css", ".json", ".sh", ".bat"]:
-                    category = "code"
-                elif ext in [".md", ".txt", ".csv", ".doc", ".docx", ".pdf"]:
-                    category = "document"
-                elif ext in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".mp3", ".wav", ".mp4"]:
-                    category = "media"
+                try:
+                    safe_p = self._validate_safe_path(p, self.artifacts_dir)
+                    rel_path = str(safe_p.relative_to(self.artifacts_dir)).replace("\\", "/")
+                    stat = safe_p.stat()
+                    
+                    # Determine category
+                    ext = safe_p.suffix.lower()
+                    category = "other"
+                    if ext in [".js", ".ts", ".tsx", ".jsx", ".py", ".html", ".css", ".json", ".sh", ".bat"]:
+                        category = "code"
+                    elif ext in [".md", ".txt", ".csv", ".doc", ".docx", ".pdf"]:
+                        category = "document"
+                    elif ext in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".mp3", ".wav", ".mp4"]:
+                        category = "media"
 
-                files.append(ArtifactFile(
-                    name=p.name,
-                    path=rel_path,
-                    size=stat.st_size,
-                    modified_at=datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
-                    category=category
-                ))
+                    files.append(ArtifactFile(
+                        name=safe_p.name,
+                        path=rel_path,
+                        size=stat.st_size,
+                        modified_at=datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+                        category=category
+                    ))
+                except FileSecurityException:
+                    continue
         return sorted(files, key=lambda x: x.modified_at, reverse=True)
 
     def read_artifact(self, rel_path: str) -> Optional[str]:
-        target = self.artifacts_dir / rel_path
-        if target.exists() and target.is_file():
-            try:
-                return target.read_text(encoding="utf-8")
-            except Exception:
-                return f"[Binary or Unreadable File: {target.name}]"
+        try:
+            if '..' in rel_path:
+                raise FileSecurityException("Path traversal in read_artifact")
+            target = self._validate_safe_path(self.artifacts_dir / rel_path, self.artifacts_dir)
+            if target.exists() and target.is_file():
+                try:
+                    return target.read_text(encoding="utf-8")
+                except Exception:
+                    return f"[Binary or Unreadable File: {target.name}]"
+        except FileSecurityException:
+            return None
         return None
 
     def save_artifact(self, filename: str, content: str, subfolder: str = "") -> str:
-        dest_dir = self.artifacts_dir / subfolder if subfolder else self.artifacts_dir
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        dest_file = dest_dir / filename
-        dest_file.write_text(content, encoding="utf-8")
-        return str(dest_file.relative_to(self.artifacts_dir)).replace("\\", "/")
+        safe_filename = self._sanitize_filename(filename)
+        dest_dir = self.artifacts_dir
+        if subfolder:
+            if '..' in subfolder:
+                raise FileSecurityException(f"Path traversal detected in subfolder: {subfolder}")
+            dest_dir = dest_dir / subfolder.strip("/\\")
+        
+        safe_dest_dir = self._validate_safe_path(dest_dir, self.artifacts_dir)
+        safe_dest_dir.mkdir(parents=True, exist_ok=True)
+        
+        safe_dest_file = self._validate_safe_path(safe_dest_dir / safe_filename, self.artifacts_dir)
+        safe_dest_file.write_text(content, encoding="utf-8")
+        return str(safe_dest_file.relative_to(self.artifacts_dir)).replace("\\", "/")
+
+    def validate_html_js_integrity(self, html_content: str, js_content: str = "", task_id: str = "app_build") -> Dict[str, Any]:
+        """
+        Verification Gate: Lightweight integrity & completeness check for AI-generated code.
+        Ensures essential tags are present and no dangerous patterns like infinite loops exist.
+        Returns AgentValidationResult compatible dictionary.
+        """
+        warnings = []
+        is_valid = True
+        score = 100
+
+        # 1. HTML basic tag completeness
+        if "<html" in html_content.lower() and "</html>" not in html_content.lower():
+            warnings.append("HTML opening tag present but missing closing </html> tag")
+            is_valid = False
+            score -= 30
+
+        if "<body" in html_content.lower() and "</body>" not in html_content.lower():
+            warnings.append("HTML <body> tag present but missing closing </body> tag")
+            is_valid = False
+            score -= 20
+
+        # 2. Dangerous infinite loop pattern check in JS
+        if js_content:
+            infinite_loop_patterns = [
+                r"while\s*\(\s*true\s*\)\s*\{(?!.*break).*",
+                r"for\s*\(\s*;\s*;\s*\)\s*\{(?!.*break).*"
+            ]
+            for pat in infinite_loop_patterns:
+                if re.search(pat, js_content, re.DOTALL):
+                    warnings.append("Potential infinite loop pattern detected in JavaScript code")
+                    is_valid = False
+                    score -= 50
+                    break
+
+        score = max(0, min(100, score))
+        suggested_fix = "HTML 닫는 태그(</html>, </body>)를 보강하고 무한 루프 탈출 조건을 추가하세요." if not is_valid else None
+
+        result_model = AgentValidationResult(
+            task_id=task_id,
+            is_valid=is_valid,
+            score=score,
+            errors=warnings,
+            suggested_fix=suggested_fix
+        )
+
+        return result_model.model_dump()
 
     def extract_code_blocks(self, markdown_text: str) -> dict:
         """Extracts HTML, CSS, and JS code blocks from markdown."""
-        import re
         result = {"html": "", "css": "", "js": "", "full_html": ""}
         
         # Match html code blocks
@@ -103,9 +194,15 @@ class FileService:
         title: str = "Autonomous AI App"
     ) -> dict:
         """
-        Creates real physical project files in app_build/{app_id}/ directory.
+        Creates real physical project files in app_build/{app_id}/ directory
+        with strict path validation and Verification Gate.
         """
-        build_dir = Path("app_build") / app_id
+        # Sanitize app_id
+        safe_app_id = re.sub(r'[^a-zA-Z0-9_\-]', '', app_id)
+        if not safe_app_id:
+            safe_app_id = "app_default"
+
+        build_dir = self._validate_safe_path(self.app_build_dir / safe_app_id, self.app_build_dir)
         build_dir.mkdir(parents=True, exist_ok=True)
 
         extracted = self.extract_code_blocks(full_markdown)
@@ -128,6 +225,9 @@ class FileService:
 </body>
 </html>"""
 
+        # Run Verification Gate
+        integrity = self.validate_html_js_integrity(html_content, extracted["js"])
+
         # 1. Write index.html
         (build_dir / "index.html").write_text(html_content, encoding="utf-8")
 
@@ -141,7 +241,7 @@ class FileService:
 
         # 4. Write package.json
         pkg_json = f"""{{
-  "name": "{app_id}",
+  "name": "{safe_app_id}",
   "version": "1.0.0",
   "description": "{title}",
   "main": "index.html",
@@ -158,15 +258,20 @@ class FileService:
         (build_dir / "README.md").write_text(f"# {title}\n\nGenerated by 10 Agent Autonomous Factory.\n\n{full_markdown}", encoding="utf-8")
 
         return {
-            "app_id": app_id,
+            "app_id": safe_app_id,
             "project_dir": str(build_dir).replace("\\", "/"),
             "index_html_path": str(build_dir / "index.html").replace("\\", "/"),
-            "files": [p.name for p in build_dir.iterdir() if p.is_file()]
+            "files": [p.name for p in build_dir.iterdir() if p.is_file()],
+            "verification": integrity
         }
 
     def get_app_html(self, app_id: str) -> Optional[str]:
-        target = Path("app_build") / app_id / "index.html"
-        if target.exists() and target.is_file():
-            return target.read_text(encoding="utf-8")
+        try:
+            safe_app_id = re.sub(r'[^a-zA-Z0-9_\-]', '', app_id)
+            target = self._validate_safe_path(self.app_build_dir / safe_app_id / "index.html", self.app_build_dir)
+            if target.exists() and target.is_file():
+                return target.read_text(encoding="utf-8")
+        except FileSecurityException:
+            return None
         return None
 

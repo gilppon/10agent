@@ -19,6 +19,8 @@ export interface Message {
   content: string;
   reasoning?: string | null;
   created_at?: string;
+  error?: boolean;
+  errorMessage?: string;
 }
 
 export interface Session {

@@ -72,3 +72,16 @@ class ArtifactFile(BaseModel):
     size: int
     modified_at: str
     category: str  # 'code' | 'document' | 'media' | 'other'
+
+class CodeChangeProposal(BaseModel):
+    file_path: str = Field(description="수정 또는 생성할 파일의 상대 경로")
+    description: str = Field(description="변경 목적 및 설계 의도")
+    full_content: str = Field(description="작성된 완전한 코드 본문")
+    test_coverage_plan: str = Field(description="해당 코드를 검증할 테스트 계획")
+
+class AgentValidationResult(BaseModel):
+    task_id: str = "default_task"
+    is_valid: bool = Field(description="테스트 및 린트 통과 여부")
+    score: int = Field(default=100, ge=0, le=100, description="하네스 검증 점수")
+    errors: List[str] = Field(default_factory=list, description="발견된 결함 목록")
+    suggested_fix: Optional[str] = Field(None, description="수정 가이드")

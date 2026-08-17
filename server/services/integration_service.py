@@ -129,6 +129,22 @@ class IntegrationService:
                             {"key": "business_account_id", "label": "Business Account ID", "type": "text", "placeholder": "178414..."}
                         ]
                     })
+                ),
+                (
+                    "mcp_hub",
+                    "MCP 표준 도구 허브 (Model Context Protocol)",
+                    "외부 MCP 서버(Stripe, GitHub, Notion 등)를 연결하여 에이전트 도구 생태계를 무한 확장합니다.",
+                    "미설정",
+                    json.dumps({"mcp_server_url": "", "api_key": ""}),
+                    json.dumps({
+                        "icon": "🔌",
+                        "badge": "2026 표준",
+                        "help_text": "로컬 또는 원격 MCP Server JSON-RPC 엔드포인트 URL 등록",
+                        "fields": [
+                            {"key": "mcp_server_url", "label": "MCP Server URL", "type": "text", "placeholder": "http://localhost:8080/mcp"},
+                            {"key": "api_key", "label": "Bearer API Key (선택)", "type": "password", "placeholder": "mcp_sk_..."}
+                        ]
+                    })
                 )
             ]
             

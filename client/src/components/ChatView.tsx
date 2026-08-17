@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Agent, Message } from '../types';
-import { Send, Bot, User, ChevronDown, ChevronRight, Copy, Check, Sparkles } from 'lucide-react';
+import { Send, Bot, User, ChevronDown, ChevronRight, Copy, Check, Sparkles, AlertTriangle, RotateCcw } from 'lucide-react';
 
 interface ChatViewProps {
   agent: Agent;
@@ -9,6 +9,7 @@ interface ChatViewProps {
   streamingReasoning: string;
   isStreaming: boolean;
   onSendMessage: (text: string) => void;
+  onRetryMessage?: (text: string) => void;
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({
@@ -17,7 +18,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   streamingToken,
   streamingReasoning,
   isStreaming,
-  onSendMessage
+  onSendMessage,
+  onRetryMessage
 }) => {
   const [inputText, setInputText] = useState('');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -176,17 +178,65 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                 <div className="glass-panel" style={{
                   padding: '14px 18px',
-                  background: isUser ? 'var(--accent-indigo)' : 'var(--bg-card)',
+                  background: isUser ? 'var(--accent-indigo)' : msg.error ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-card)',
                   color: '#F8FAFC',
                   borderRadius: isUser ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
                   fontSize: '14px',
                   lineHeight: 1.6,
                   whiteSpace: 'pre-wrap',
-                  position: 'relative'
+                  position: 'relative',
+                  border: msg.error ? '1px solid rgba(239, 68, 68, 0.4)' : undefined
                 }}>
-                  {msg.content}
+                  {msg.content || (msg.error ? <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>[응답 생성 중단됨]</span> : '')}
 
-                  {!isUser && (
+                  {/* Inline Error & Retry Action Card */}
+                  {msg.error && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#FCA5A5' }}>
+                        <AlertTriangle size={16} color="#EF4444" style={{ flexShrink: 0 }} />
+                        <span>{msg.errorMessage || '로컬 AI 모델과의 연결이 중단되었습니다.'}</span>
+                      </div>
+                      {onRetryMessage && (
+                        <button
+                          onClick={() => {
+                            // Find the preceding user message to retry
+                            const prevUserMsg = messages.slice(0, idx).reverse().find(m => m.role === 'user');
+                            if (prevUserMsg) {
+                              onRetryMessage(prevUserMsg.content);
+                            }
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            background: '#EF4444',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            flexShrink: 0
+                          }}
+                        >
+                          <RotateCcw size={12} /> 다시 시도
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {!isUser && !msg.error && msg.content && (
                     <button
                       onClick={() => copyToClipboard(msg.content, idx)}
                       style={{

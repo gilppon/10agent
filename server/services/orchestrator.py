@@ -43,53 +43,78 @@ class MultiAgentOrchestrator:
             await db.close()
         return msg_id
 
+    def _trim_history_to_token_limit(self, history: List[Dict[str, str]], max_chars: int = 7000) -> List[Dict[str, str]]:
+        """
+        Sliding Window Context Limiter:
+        Retains the most recent messages up to max_chars (~3,000 tokens for multilingual text)
+        to strictly prevent VRAM OOM and TTFT spikes on 6GB~8GB local models.
+        """
+        if not history:
+            return []
+        
+        total_chars = 0
+        trimmed: List[Dict[str, str]] = []
+        
+        # Iterate from the newest message backwards
+        for msg in reversed(history):
+            msg_len = len(msg.get("content", ""))
+            if total_chars + msg_len > max_chars and len(trimmed) >= 2:
+                # Always keep at least the last 2 messages if possible, but stop if budget exceeded
+                break
+            trimmed.append(msg)
+            total_chars += msg_len
+            
+        return list(reversed(trimmed))
+
     async def get_session_history_for_agent(
         self,
         session_id: str,
         current_agent_id: Optional[str] = None,
-        limit: int = 20
+        limit: int = 30,
+        max_chars: int = 7000
     ) -> List[Dict[str, str]]:
         """
-        Retrieves session history with Context Firewall:
-        Only messages from the current agent are treated as 'assistant'.
-        Messages from other agents are safely wrapped as 'user' reference blocks
-        to prevent Speaker Echoing & Confusion.
+        Retrieves session history with Context Firewall & Sliding Window:
+        1. Only messages from the current agent are treated as 'assistant'.
+        2. Messages from other agents are safely wrapped as 'user' reference blocks.
+        3. Sliding Window trims older messages to stay within ~3,000 tokens budget.
         """
         db = await get_db()
         try:
             cursor = await db.execute("""
                 SELECT role, content, agent_id FROM messages
                 WHERE session_id = ?
-                ORDER BY created_at ASC
+                ORDER BY created_at DESC, rowid DESC
                 LIMIT ?
             """, (session_id, limit))
             rows = await cursor.fetchall()
-            history = []
-            for r in rows:
+            
+            raw_history = []
+            for r in reversed(rows):
                 if r["role"] == "user":
-                    history.append({
+                    raw_history.append({
                         "role": "user",
                         "content": r["content"]
                     })
                 elif r["role"] == "assistant":
-                    # If this message belongs to the current agent, keep as assistant
                     if current_agent_id and r["agent_id"] == current_agent_id:
-                        history.append({
+                        raw_history.append({
                             "role": "assistant",
                             "content": r["content"]
                         })
                     else:
-                        # Belongs to another agent - wrap as reference context to prevent echoing
                         agent_name = r["agent_id"] if r["agent_id"] else "동료 에이전트"
-                        history.append({
+                        raw_history.append({
                             "role": "user",
                             "content": f"[📜 동료 에이전트 ({agent_name})의 이전 발언 기록]:\n{r['content']}"
                         })
-            return history
+            
+            # Apply Sliding Window Token Guard
+            return self._trim_history_to_token_limit(raw_history, max_chars=max_chars)
         finally:
             await db.close()
 
-    async def get_session_history(self, session_id: str, limit: int = 20) -> List[Dict[str, str]]:
+    async def get_session_history(self, session_id: str, limit: int = 30) -> List[Dict[str, str]]:
         return await self.get_session_history_for_agent(session_id, None, limit)
 
     async def stream_agent_chat(
@@ -101,36 +126,40 @@ class MultiAgentOrchestrator:
     ) -> AsyncGenerator[str, None]:
         """
         Processes a chat request with a specific agent and streams SSE chunks.
+        Applies Volatile In-Memory Injection for RAG/WebSearch so DB messages remain pure.
         """
         agent = await self.agent_mgr.get_agent(agent_id)
         if not agent:
             yield f"data: {json.dumps({'error': f'Agent {agent_id} not found'})}\n\n"
             return
 
-        # Save user message
+        # 1. Save pure user message to DB (Without search/RAG bloat)
         await self.save_message(session_id, "user", user_message)
 
-        # Get conversation history with speaker firewall
+        # 2. Get conversation history with speaker firewall & sliding window
         history = await self.get_session_history_for_agent(session_id, current_agent_id=agent.id)
+
+        # 3. Volatile In-Memory Injection for Web Search & Knowledge RAG
+        # Make a shallow copy of history to avoid mutating DB persistence
+        runtime_history = [dict(h) for h in history]
 
         # Autonomous Web Search for Researcher (Jungwoo)
         if agent.id == "researcher":
             search_results = await web_search_service.search(user_message)
             if search_results:
                 search_block = web_search_service.format_search_results_for_prompt(user_message, search_results)
-                # Append web search context to the latest prompt
-                if history and history[-1]["role"] == "user":
-                    history[-1]["content"] += f"\n\n{search_block}"
+                if runtime_history and runtime_history[-1]["role"] == "user":
+                    runtime_history[-1]["content"] += f"\n\n{search_block}"
                 else:
-                    history.append({"role": "user", "content": search_block})
+                    runtime_history.append({"role": "user", "content": search_block})
 
         # Agent Dedicated Knowledge RAG Ingestion Context
         rag_context = await knowledge_service.retrieve_relevant_knowledge(agent.id, user_message)
         if rag_context:
-            if history and history[-1]["role"] == "user":
-                history[-1]["content"] += f"\n\n{rag_context}"
+            if runtime_history and runtime_history[-1]["role"] == "user":
+                runtime_history[-1]["content"] += f"\n\n{rag_context}"
             else:
-                history.append({"role": "user", "content": rag_context})
+                runtime_history.append({"role": "user", "content": rag_context})
 
         # Determine target model
         target_model = override_model if override_model else agent.model
@@ -142,7 +171,7 @@ class MultiAgentOrchestrator:
         # Send Agent Meta Info
         yield f"data: {json.dumps({'type': 'agent_start', 'agent': agent.model_dump(), 'model': target_model})}\n\n"
 
-        async for chunk in self.ollama.stream_chat(target_model, history, system_prompt):
+        async for chunk in self.ollama.stream_chat(target_model, runtime_history, system_prompt):
             if chunk["type"] == "token":
                 full_content += chunk["content"]
                 yield f"data: {json.dumps({'type': 'token', 'content': chunk['content']})}\n\n"

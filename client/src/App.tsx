@@ -146,11 +146,35 @@ export const App: React.FC = () => {
           setStreamingReasoning('');
         },
         onError: (err) => {
-          console.error(err);
+          console.error('[Stream Error]', err);
           setIsStreaming(false);
+          setMessages(prev => [
+            ...prev,
+            {
+              session_id: currentSessionId,
+              agent_id: selectedAgent.id,
+              role: 'assistant',
+              content: accumulatedContent || '',
+              error: true,
+              errorMessage: err?.message || '로컬 AI 모델과의 연결이 중단되었습니다.'
+            }
+          ]);
         }
       }
     );
+  };
+
+  const handleRetryMessage = (failedText: string) => {
+    // Remove the trailing error message if present
+    setMessages(prev => {
+      const last = prev[prev.length - 1];
+      if (last && last.error) {
+        return prev.slice(0, -1);
+      }
+      return prev;
+    });
+    // Resend the message
+    handleSendMessage(failedText);
   };
 
   const handleModelChange = async (model: string) => {
@@ -216,6 +240,7 @@ export const App: React.FC = () => {
               streamingReasoning={streamingReasoning}
               isStreaming={isStreaming}
               onSendMessage={handleSendMessage}
+              onRetryMessage={handleRetryMessage}
             />
           )}
         </div>

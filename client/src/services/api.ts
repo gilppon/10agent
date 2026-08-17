@@ -278,13 +278,25 @@ export const api = {
       onError: (err: any) => void;
     }
   ) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      callbacks.onError(new Error('로컬 AI 모델 응답 시간(120초)이 초과되었습니다.'));
+    }, 120000);
+
     fetch(`${API_BASE}/chat/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: controller.signal
     })
       .then(async (response) => {
-        if (!response.body) return;
+        if (!response.ok) {
+          throw new Error(`서버 응답 오류 (HTTP ${response.status})`);
+        }
+        if (!response.body) {
+          throw new Error('응답 본문이 비어 있습니다.');
+        }
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -300,6 +312,10 @@ export const api = {
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6));
+                if (data.error) {
+                  callbacks.onError(new Error(data.error));
+                  return;
+                }
                 if (data.type === 'token') {
                   callbacks.onToken(data.content);
                 } else if (data.type === 'reasoning') {
@@ -314,7 +330,14 @@ export const api = {
           }
         }
       })
-      .catch(callbacks.onError);
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          callbacks.onError(err);
+        }
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+      });
   },
 
   streamRoundtable(
@@ -325,13 +348,21 @@ export const api = {
       onError: (err: any) => void;
     }
   ) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      callbacks.onError(new Error('원탁회의 세션 응답 시간(180초)이 초과되었습니다.'));
+    }, 180000);
+
     fetch(`${API_BASE}/roundtable/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: controller.signal
     })
       .then(async (response) => {
-        if (!response.body) return;
+        if (!response.ok) throw new Error(`서버 응답 오류 (HTTP ${response.status})`);
+        if (!response.body) throw new Error('응답 본문이 비어 있습니다.');
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -347,6 +378,10 @@ export const api = {
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6));
+                if (data.error) {
+                  callbacks.onError(new Error(data.error));
+                  return;
+                }
                 callbacks.onEvent(data);
                 if (data.type === 'roundtable_done') {
                   callbacks.onDone();
@@ -358,7 +393,12 @@ export const api = {
           }
         }
       })
-      .catch(callbacks.onError);
+      .catch((err) => {
+        if (err.name !== 'AbortError') callbacks.onError(err);
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+      });
   },
 
   streamPipeline(
@@ -369,13 +409,21 @@ export const api = {
       onError: (err: any) => void;
     }
   ) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      callbacks.onError(new Error('파이프라인 실행 시간(300초)이 초과되었습니다.'));
+    }, 300000);
+
     fetch(`${API_BASE}/pipeline/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: controller.signal
     })
       .then(async (response) => {
-        if (!response.body) return;
+        if (!response.ok) throw new Error(`서버 응답 오류 (HTTP ${response.status})`);
+        if (!response.body) throw new Error('응답 본문이 비어 있습니다.');
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -391,6 +439,10 @@ export const api = {
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6));
+                if (data.error) {
+                  callbacks.onError(new Error(data.error));
+                  return;
+                }
                 callbacks.onEvent(data);
                 if (data.type === 'pipeline_complete') {
                   callbacks.onDone();
@@ -402,6 +454,11 @@ export const api = {
           }
         }
       })
-      .catch(callbacks.onError);
+      .catch((err) => {
+        if (err.name !== 'AbortError') callbacks.onError(err);
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+      });
   },
 };
