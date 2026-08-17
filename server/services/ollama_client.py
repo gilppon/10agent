@@ -316,8 +316,25 @@ class LocalAIClient:
                 full_content += chunk["content"]
         return full_content
 
-# Compatibility Alias
+    async def chat_completion(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Convenience method for non-streaming chat completions."""
+        model = payload.get("model", "deepseek-r1:latest")
+        messages = payload.get("messages", [])
+        system_prompt = None
+        user_msgs = []
+        for m in messages:
+            if m.get("role") == "system":
+                system_prompt = m.get("content")
+            else:
+                user_msgs.append(m)
+        content = await self.generate_single(model, user_msgs, system_prompt=system_prompt)
+        return {
+            "message": {"role": "assistant", "content": content}
+        }
+
+# Compatibility Alias & Singleton
 OllamaClient = LocalAIClient
 local_ai_client = LocalAIClient()
+ollama_client = local_ai_client
 
 
