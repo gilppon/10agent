@@ -191,6 +191,7 @@ class TelegramService:
             }
 
         prompt = f"{target_idea['title']} - {target_idea['desc']}"
+        self.current_active_task = target_idea['title']
         await self.send_message(
             f"⚡ <b>[개발 착수 알림]</b>\n대표님께서 <b>'{target_idea['title']}'</b> 아이템을 승인하셨습니다!\n"
             f"10대 에이전트 군단(정우 ➡️ CEO ➡️ 민희 ➡️ 코다리 ➡️ 레오 ➡️ 찬우 ➡️ 지은 ➡️ 현빈)이 "
@@ -245,6 +246,8 @@ class TelegramService:
 
         except Exception as e:
             await self.send_message(f"🚨 [개발 진행 중 오류 발생]: {str(e)}")
+        finally:
+            self.current_active_task = None
 
     async def _poll_updates(self):
         """Background long polling loop to receive button clicks and user messages."""
@@ -281,16 +284,38 @@ class TelegramService:
                                         idea_id = cb_data.replace("approve_", "")
                                         asyncio.create_task(self.execute_approved_idea_pipeline(idea_id, from_chat_id))
 
-                                # Handle text commands (e.g. /scout, /help)
+                                # Handle text commands (e.g. /scout, /help, /status, natural language)
                                 elif "message" in update and "text" in update["message"]:
                                     msg_text = update["message"]["text"].strip()
-                                    if msg_text in ["/scout", "/아이템", "/발굴"]:
+                                    if msg_text in ["/scout", "/아이템", "/발굴", "아이템", "발굴"]:
                                         asyncio.create_task(self.send_scouted_report_to_telegram())
                                     elif msg_text in ["/start", "/help", "/도움말"]:
                                         await self.send_message(
                                             "충성! <b>코다리 개발부장 텔레그램 봇</b>입니다!\n\n"
                                             "• <code>/scout</code> 또는 <code>/아이템</code> : 오늘 시장의 핫 SaaS 아이템 3종 자율 발굴 요청\n"
+                                            "• <code>/status</code> 또는 <code>진행중이야?</code> : 현재 10대 에이전트 개발 진행 상황 실시간 조회\n"
                                             "• 보고서의 <b>[🚀 개발 승인]</b> 버튼을 누르면 즉시 10대 에이전트가 풀코스 자율 개발을 완주합니다!"
+                                        )
+                                    elif any(k in msg_text for k in ["진행", "상태", "어디까지", "개발중", "status", "/status"]):
+                                        active = getattr(self, "current_active_task", None)
+                                        if active:
+                                            await self.send_message(
+                                                f"⚡ <b>[현재 작업 진행 중]</b>\n"
+                                                f"대표님! 현재 10대 에이전트 군단이 <b>'{active}'</b> 프로젝트를 열심히 빌드하고 있습니다!\n"
+                                                f"완성되는 즉시 소스코드와 총괄 보고서를 이곳으로 직송해 올리겠습니다, 충성! 🫡"
+                                            )
+                                        else:
+                                            await self.send_message(
+                                                "☕ <b>[현재 대기 중]</b>\n"
+                                                "대표님! 현재 진행 중인 개발 작업이 없습니다.\n"
+                                                "<code>/scout</code>를 입력하여 새로운 핫 아이템 3종을 발굴하시거나 개발을 지시해 주십시오! 🫡"
+                                            )
+                                    else:
+                                        await self.send_message(
+                                            f"충성! 대표님, 코다리 부장입니다! 🫡\n"
+                                            f"'{msg_text}' 말씀을 접수했습니다.\n\n"
+                                            f"• <b>/scout</b> : 유망 SaaS 3종 발굴 및 개발 승인\n"
+                                            f"• <b>/status</b> : 현재 파이프라인 진행 상태 조회"
                                         )
                 except Exception as e:
                     # Ignore timeout and retry

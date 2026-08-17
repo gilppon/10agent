@@ -198,32 +198,7 @@ from server.services.integration_service import integration_service
 from server.services.hardware_profiler import hardware_profiler
 from server.services.knowledge_service import knowledge_service
 
-# --- Agent Knowledge (1-Click RAG Ingestion) API ---
-
-@app.post("/api/knowledge/ingest")
-async def ingest_agent_knowledge(payload: dict):
-    agent_id = payload.get("agent_id")
-    query_or_url = payload.get("query_or_url")
-    if not agent_id or not query_or_url:
-        raise HTTPException(status_code=400, detail="agent_id and query_or_url are required")
-    try:
-        res = await knowledge_service.ingest_knowledge(agent_id, query_or_url)
-        return res
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/knowledge/{agent_id}")
-async def get_agent_knowledge_list(agent_id: str):
-    items = await knowledge_service.list_knowledge(agent_id)
-    presets = knowledge_service.get_presets(agent_id)
-    return {"agent_id": agent_id, "knowledge": items, "presets": presets}
-
-@app.delete("/api/knowledge/{agent_id}")
-async def delete_agent_knowledge(agent_id: str, title: str):
-    deleted = await knowledge_service.delete_knowledge_by_title(agent_id, title)
-    return {"status": "success", "deleted_count": deleted}
-
-# --- Knowledge Network & Graph & Backup API ---
+# --- Knowledge Network & Graph & Backup API (Static Routes First) ---
 
 @app.get("/api/knowledge/graph")
 async def get_knowledge_graph():
@@ -276,6 +251,31 @@ async def get_auto_scout_status():
 async def toggle_auto_scout(payload: dict):
     enabled = payload.get("enabled", True)
     return knowledge_service.toggle_auto_scout(enabled)
+
+# --- Agent-Specific Knowledge API (Parameterized Routes) ---
+
+@app.post("/api/knowledge/ingest")
+async def ingest_agent_knowledge(payload: dict):
+    agent_id = payload.get("agent_id")
+    query_or_url = payload.get("query_or_url")
+    if not agent_id or not query_or_url:
+        raise HTTPException(status_code=400, detail="agent_id and query_or_url are required")
+    try:
+        res = await knowledge_service.ingest_knowledge(agent_id, query_or_url)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/knowledge/{agent_id}")
+async def get_agent_knowledge_list(agent_id: str):
+    items = await knowledge_service.list_knowledge(agent_id)
+    presets = knowledge_service.get_presets(agent_id)
+    return {"agent_id": agent_id, "knowledge": items, "presets": presets}
+
+@app.delete("/api/knowledge/{agent_id}")
+async def delete_agent_knowledge(agent_id: str, title: str):
+    deleted = await knowledge_service.delete_knowledge_by_title(agent_id, title)
+    return {"status": "success", "deleted_count": deleted}
 
 # --- 📱 Telegram Remote Autonomous Control API ---
 
