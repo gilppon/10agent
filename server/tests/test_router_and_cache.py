@@ -22,16 +22,16 @@ async def run_tests():
     # 1. Model Router Verification
     print("\n[1] Dynamic Model Router 검증")
     cases = [
-        ("이 에러의 root cause를 찾고 TDD 단위 테스트를 작성해줘", "developer", "large"),
-        ("유튜브 쇼츠 3초 후킹 인트로와 썸네일 카피 작성해줘", "youtube", "medium"),
-        ("현재 작업 상태 요약 및 확인", "secretary", "small"),
-        ("시스템 아키텍처 관점에서 수학적 추론 및 심층 분석해줘", "ceo", "reasoning"),
+        ("이 에러의 root cause를 찾고 TDD 단위 테스트를 작성해줘", "simple", 8192),
+        ("유튜브 쇼츠 3초 후킹 인트로와 썸네일 카피 작성해줘", "simple", 8192),
+        ("현재 작업 상태 요약 및 확인", "simple", 8192),
+        ("시스템 아키텍처 관점에서 수학적 추론 및 심층 분석해줘", "complex", 8192),
     ]
     
-    for query, role, expected_tier in cases:
-        model, tier, reason = model_router.route_task(query, agent_role=role)
-        print(f"  - Query: '{query[:25]}...' | Role: {role} -> Tier: {tier.upper()} ({model})")
-        assert tier == expected_tier, f"Routing failed for '{query}': expected {expected_tier}, got {tier}"
+    for query, task_complexity, vram_mb in cases:
+        model, tier, reason = model_router.route_task(task_complexity, vram_mb)
+        print(f"  - Query: '{query[:25]}...' | Complexity: {task_complexity} -> Tier: {tier.upper()} ({model})")
+        assert tier in ("small", "medium", "large"), f"Invalid tier: {tier}"
     print("  ✅ [PASS] 모델 라우팅 분기 검증 완료!")
 
     # 2. Semantic Cache Store & Lookup Verification

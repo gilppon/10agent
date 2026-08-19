@@ -1,55 +1,98 @@
-import re
-from typing import Dict, Any, Tuple
-from server.config import (
-    DEFAULT_SMALL_MODEL,
-    DEFAULT_MEDIUM_MODEL,
-    DEFAULT_LARGE_MODEL,
-    DEFAULT_REASONING_MODEL
-)
+from typing import Optional, Tuple
 
-class ModelRouter:
-    """
-    Intelligent dynamic router that analyzes incoming agent tasks or user queries
-    and determines the optimal LLM size/tier to minimize VRAM & latency.
-    """
+
+class VRAMModelRouter:
     def __init__(self):
-        self.small_model = DEFAULT_SMALL_MODEL
-        self.medium_model = DEFAULT_MEDIUM_MODEL
-        self.large_model = DEFAULT_LARGE_MODEL
-        self.reasoning_model = DEFAULT_REASONING_MODEL
+        self.model_tiers = {
+            "small": ["llama3.2:3b", "qwen2.5:3b", "deepseek-coder:6.7b"],
+            "medium": ["llama3.2:7b", "qwen2.5:7b", "deepseek-r1:14b"],
+            "large": ["llama3.2:13b", "qwen2.5:14b", "mixtral-8x7b"]
+        }
 
-    def route_task(self, query: str, agent_role: str = "", user_preferred_model: str = "") -> Tuple[str, str, str]:
+    def route_task(self, task_complexity: str, available_vram_mb: int) -> Tuple[Optional[str], str, str]:
         """
-        Determine target model based on query complexity and agent role.
-        Returns: (selected_model_name, tier_name, reason)
+        투입된 작업 복잡도와 사용 가능한 VRAM에 따라 최적 모델 라우팅
+
+        Args:
+            task_complexity: "simple" 또는 "complex"
+            available_vram_mb: 사용 가능한 VRAM (MB)
+
+        Returns:
+            (추천 모델 이름, 모델 티어, 라우팅 사유) 또는 (None, "small", "VRAM 부족으로 시뮬레이션 모드")
         """
-        # If user explicitly picked a specific heavy/custom model and not 'auto', respect it
-        if user_preferred_model and user_preferred_model not in ("auto", "default", "dynamic"):
-            return user_preferred_model, "custom", "사용자 명시적 모델 지정"
+        from server.services.model_router import get_model_tier
+        small_models = self.model_tiers["small"]
+        medium_models = self.model_tiers["medium"]
+        large_models = self.model_tiers["large"]
+        tier = get_model_tier(available_vram_mb)
 
-        text = query.lower()
-        
-        # 1. Deep Reasoning / Architectural Planning / Complex Coding -> High Tier (32B / R1)
-        reasoning_keywords = [
-            "deep thinking", "think", "추론", "수학적", "증명", "알고리즘 설계",
-            "아키텍처", "전략 수립", "위험 분석", "root cause", "원인 분석",
-            "refactor", "리팩토링", "tdd", "unit test", "단위 테스트 작성"
-        ]
-        if any(k in text for k in reasoning_keywords) or agent_role in ("ceo", "developer", "business"):
-            if "think" in text or "추론" in text or "증명" in text:
-                return self.reasoning_model, "reasoning", "심층 추론 및 원인/전략 분석 태스크"
-            return self.large_model, "large", "핵심 코드 생성 및 아키텍처 설계 태스크"
+        if available_vram_mb < 4096:  # < 4GB
+            if task_complexity == "simple":
+                return small_models[0], tier, "간단한 작업: 가벼운 모델 라우팅"
+            return None, tier, "VRAM 부족(4GB 미만): 시뮬레이션 모드"
+        elif available_vram_mb < 8192:  # 4-8GB
+            if task_complexity == "simple":
+                return small_models[0], tier, "간단한 작업: 가벼운 모델 라우팅"
+            elif task_complexity == "complex":
+                return None, tier, "복잡한 작업: VRAM 부족으로 시뮬레이션 모드"
+            else:
+                return medium_models[0], tier, "중간 복잡도: 미디움 모델 라우팅"
+        else:  # 8GB+
+            if task_complexity == "complex":
+                return large_models[0], tier, "복잡한 작업: 파워풀 모델 라우팅"
+            else:
+                return medium_models[0], tier, "일반 작업: 미디움 모델 라우팅"
 
-        # 2. Creative Copywriting / Content Generation / Visual Brief -> Medium Tier (7B)
-        medium_keywords = [
-            "카피라이팅", "후킹", "스크립트", "스토리보드", "해시태그", "인스타그램",
-            "유튜브", "썸네일", "창작", "번역", "작문"
-        ]
-        if any(k in text for k in medium_keywords) or agent_role in ("designer", "youtube", "instagram", "writer", "editor", "researcher"):
-            return self.medium_model, "medium", "콘텐츠 생성, 마케팅 카피 및 비주얼 기획"
+    def get_model_tier(self, available_vram_mb: int) -> str:
+        """
+        사용 가능한 VRAM에 따른 모델 티어 반환
 
-        # 3. Simple Extraction / Intent Classification / Light Status Check / Summary -> Small Tier (3B SLM)
-        return self.small_model, "small", "단순 의도 분류, 데이터 추출 및 빠른 상태 확인 (초경량 연산)"
+        Args:
+            available_vram_mb: 사용 가능한 VRAM (MB)
+
+        Returns:
+            "small", "medium", 또는 "large"
+        """
+        if available_vram_mb < 4096:
+            return "small"
+        elif available_vram_mb < 8192:
+            return "medium"
+        else:
+            return "large"
 
 
-model_router = ModelRouter()
+# 전역 라우터 인스턴스
+_model_router: Optional[VRAMModelRouter] = None
+
+
+def get_model_router() -> VRAMModelRouter:
+    """전역 VRAM 모델 라우터 인스턴스 반환"""
+    global _model_router
+    if _model_router is None:
+        _model_router = VRAMModelRouter()
+    return _model_router
+
+
+def route_task(task_complexity: str, available_vram_mb: int) -> Optional[str]:
+    """
+    편의 함수: VRAM 기반 모델 라우팅 (전역 인스턴스 사용)
+
+    Args:
+        task_complexity: "simple" 또는 "complex"
+        available_vram_mb: 사용 가능한 VRAM (MB)
+
+    Returns:
+        추천 모델 이름 또는 None
+    """
+    result = get_model_router().route_task(task_complexity, available_vram_mb)
+    return result[0] if result else None
+
+
+def get_model_tier(available_vram_mb: int) -> str:
+    """편의 함수: 모델 티어 조회"""
+    return get_model_router().get_model_tier(available_vram_mb)
+
+
+# backward compatibility: module-level model_router variable
+# 이는 기존 imports(model_router)가 작동하도록 함
+model_router = get_model_router()

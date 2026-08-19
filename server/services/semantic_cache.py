@@ -4,7 +4,27 @@ import math
 import time
 import httpx
 from typing import Optional, Tuple, Dict, Any, List
+from collections import OrderedDict
 from server.config import DB_PATH, OLLAMA_BASE_URL, EMBEDDING_MODEL, SEMANTIC_CACHE_THRESHOLD, SEMANTIC_CACHE_ENABLED
+
+class LRUCache:
+    def __init__(self, capacity: int = 100):
+        self.cache = OrderedDict()
+        self.capacity = capacity
+    
+    def lookup(self, key: str) -> Optional[Any]:
+        if key in self.cache:
+            self.cache.move_to_end(key)
+            return self.cache[key]
+        return None
+    
+    def insert(self, key: str, value: Any) -> None:
+        if key in self.cache:
+            self.cache.move_to_end(key)
+        else:
+            self.cache[key] = value
+            if len(self.cache) > self.capacity:
+                self.cache.popitem(last=False)
 
 class SemanticCache:
     def __init__(self, db_path=DB_PATH, threshold=SEMANTIC_CACHE_THRESHOLD, enabled=SEMANTIC_CACHE_ENABLED):
@@ -13,6 +33,7 @@ class SemanticCache:
         self.enabled = enabled
         self.embedding_model = EMBEDDING_MODEL
         self.base_url = OLLAMA_BASE_URL.rstrip("/")
+        self.lru_cache = LRUCache(capacity=100)
         self._init_db()
 
     def _init_db(self):

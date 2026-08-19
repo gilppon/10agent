@@ -134,10 +134,22 @@ class LocalAIClient:
         last_user_query = messages[-1]["content"] if messages else ""
         
         # 1. Dynamic Model Routing
+        # Determine task complexity based on query length
+        query_len = len(last_user_query)
+        task_complexity = "complex" if query_len > 100 else "simple"
+        
+        # Get available VRAM from hardware profiler
+        available_vram_mb = 8192  # default fallback
+        try:
+            from server.services.hardware_profiler import hardware_profiler
+            vram_info = hardware_profiler.flush_vram()
+            available_vram_mb = int(vram_info.get("free_vram_gb", 4) * 1024)
+        except Exception:
+            pass
+        
         resolved_model, tier, route_reason = model_router.route_task(
-            query=last_user_query,
-            agent_role=agent_role,
-            user_preferred_model=model
+            task_complexity=task_complexity,
+            available_vram_mb=available_vram_mb
         )
         yield {
             "type": "routing_info",

@@ -24,6 +24,8 @@ Thumbs.db
 
 # Database
 storage/*.db
+server/*.db
+*.db
 
 # Logs
 *.log
