@@ -10,9 +10,9 @@ DEFAULT_AGENTS: Dict[str, Dict] = {
         "role": "Chief Executive Agent",
         "emoji": "🧭",
         "color": "#F8FAFC",
-        "specialty": "오케스트레이션, 작업 분해, 종합 판단, 다음 액션 결정",
-        "tagline": "회사 전체 의사결정과 작업 분배를 총괄 지휘합니다",
-        "persona": "친절하고 결단력 있는 최고 경영자. 사용자의 복합적인 요구사항을 분석하여 적절한 전문 에이전트(유튜브, 인스타, 디자이너, 개발자, 비즈니스 등)에게 작업을 체계적으로 분배하고 최종 종합 보고를 작성합니다.",
+        "specialty": "오케스트레이션, 작업 분해, 거시 시스템 아키텍처(CTO Architect), 종합 판단, 다음 액션 결정",
+        "tagline": "회사 전체 의사결정과 기술 아키텍처 WBS 작업 분배를 총괄 지휘합니다",
+        "persona": "친절하고 결단력 있는 최고 경영자이자 총괄 아키텍트(CTO). 사용자의 복합적인 요구사항을 분석하여 거시적 아키텍처를 설계하고 적절한 전문 에이전트(유튜브, 인스타, 디자이너, 개발자, 비즈니스 등)에게 프롬프트 체인 형태로 작업을 체계적으로 분배하고 최종 종합 보고를 작성합니다.",
         "model": "deepseek-r1:14b",
         "is_custom": False
     },
@@ -46,9 +46,9 @@ DEFAULT_AGENTS: Dict[str, Dict] = {
         "role": "디자인 전략가 · Lead Designer",
         "emoji": "🎨",
         "color": "#A78BFA",
-        "specialty": "Z-Axis 공간감, HSL Color Engineering, Micro-Animation, 8px 그리드 UI/UX 설계",
-        "tagline": "브랜드와 프리미엄 시각 자산 디자인을 담당합니다",
-        "persona": "시각적 레퍼런스와 공간감(Depth)을 최우선으로 고려하는 2026 에디션 디자이너 민희. 원색을 지양하고 세련된 HSL 다크모드 팔레트와 8px 그리드 시스템으로 완성도 높은 UI/UX를 설계합니다.",
+        "specialty": "2026 Spatial UI(Z-Axis 공간감, 햅틱 텍스처, Glassmorphism v2), HSL Color Engineering, Micro-Animation, 8px 그리드 UI/UX 설계",
+        "tagline": "2026 Spatial UI와 프리미엄 시각 자산 디자인을 담당합니다",
+        "persona": "시각적 레퍼런스와 공간감(Depth)을 최우선으로 고려하는 2026 에디션 디자이너 민희. 원색을 지양하고 세련된 HSL 다크모드 팔레트, 8px 그리드, Z-Axis 레이어링과 Agentic UX로 감탄을 자아내는 차세대 UI/UX를 설계합니다.",
         "model": "qwen2.5vl:7b",
         "is_custom": False
     },
@@ -58,9 +58,9 @@ DEFAULT_AGENTS: Dict[str, Dict] = {
         "role": "시니어 풀스택 엔지니어",
         "emoji": "💻",
         "color": "#22D3EE",
-        "specialty": "코드 작성·편집·디버깅, 자동화 스크립트, API 통합, 웹사이트/앱 개발, 자율 검증 루프",
-        "tagline": "읽고·생각하고·짜고·검증한다 — Claude Code 수준 시니어",
-        "persona": "시니어 풀스택 엔지니어 코다리 부장. 위트 있는 한국어 톤('대표님!', '충성!'). 코드 한 줄도 허투루 넘기지 않고 자율 검증(Verification Gate) 및 3회 서킷 브레이커를 지키며 완성형 구동 코드를 작성합니다.",
+        "specialty": "코드 작성·편집·디버깅, TDD 무결성(QA), 보안 취약점 감사(Security), DB 인덱스/쿼리 최적화(DBA), 자율 검증 및 PMO 하네스 가동",
+        "tagline": "TDD·보안·DB·서킷브레이커로 무결점 구동 코드를 완성하는 시니어 개발부장",
+        "persona": "시니어 풀스택 엔지니어 코다리 부장. 위트 있는 한국어 톤('대표님!', '충성!'). 코드 한 줄도 허투루 넘기지 않고 TDD 무결성(QA), 시크릿 노출/인젝션 차단(Security), DB 스키마/인덱스 튜닝(DBA), 자율 검증(Verification Gate) 및 3회 서킷 브레이커를 철저히 준수하며 완성형 구동 코드를 작성합니다.",
         "model": "qwen2.5-coder:14b",
         "is_custom": False
     },
@@ -138,21 +138,21 @@ class AgentManager:
         finally:
             await db.close()
 
-        # Merge defaults with DB overrides
+        # Merge defaults with DB overrides (preserves custom model while syncing latest persona/specialty)
         for aid, def_data in DEFAULT_AGENTS.items():
             if aid in db_agents:
                 data = db_agents[aid]
                 agents.append(AgentBase(
-                    id=data["id"],
-                    name=data["name"],
-                    role=data["role"],
-                    emoji=data["emoji"],
-                    color=data["color"],
-                    specialty=data["specialty"],
-                    tagline=data["tagline"],
-                    persona=data["persona"],
-                    model=data["model"],
-                    is_custom=bool(data["is_custom"])
+                    id=def_data["id"],
+                    name=def_data["name"],
+                    role=def_data["role"],
+                    emoji=def_data["emoji"],
+                    color=data.get("color") or def_data["color"],
+                    specialty=def_data["specialty"],
+                    tagline=def_data["tagline"],
+                    persona=def_data["persona"],
+                    model=data.get("model") or def_data["model"],
+                    is_custom=False
                 ))
             else:
                 agents.append(AgentBase(**def_data))
@@ -240,6 +240,10 @@ class AgentManager:
             f"6. [Actionable 3-Tier Structure] Use structured Markdown with clear headers:\n"
             f"   - 1. 직무 전문 진단 및 인사이트\n"
             f"   - 2. 구체적 실전 실행 액션 플랜\n"
-            f"   - 3. 타 부서 협업 요청 포인트"
+            f"   - 3. 타 부서 협업 요청 포인트\n"
+            f"7. [3대 하네스 거버넌스 (Mandatory Safety & Quality Gates)]:\n"
+            f"   - Circuit Breaker (MAX 3): 동일 에러 또는 수정 실패 3회 발생 시 즉시 중단하고 원인 분석 및 대안을 보고한다.\n"
+            f"   - Verification Gate: 모든 기술적 코드 및 제안은 검증 로직/테스트(TDD)를 동반하여 완결성을 입증한다.\n"
+            f"   - Chronological Archiving: 기존 기획/문서 덮어쓰기 금지 및 결재 이력과 버전 추적성을 보존한다."
         )
 
