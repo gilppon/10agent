@@ -102,10 +102,11 @@ class LocalAIClient:
 
         # Fallback default recommendations
         return [
-            {"name": "qwen2.5-coder:32b", "source": "Ollama / LM Studio", "size": "19.0 GB", "vram_tier": "24GB (RTX 3090/4090)", "digest": "large"},
+            {"name": "qwen3.8-9b", "source": "LM Studio", "size": "9.0 GB", "vram_tier": "8GB~12GB", "digest": "default"},
+            {"name": "qwen2.5-coder:14b", "source": "Ollama / LM Studio", "size": "9.0 GB", "vram_tier": "12GB~16GB", "digest": "code"},
             {"name": "qwen2.5:7b", "source": "Ollama / LM Studio", "size": "4.7 GB", "vram_tier": "6GB~8GB", "digest": "medium"},
             {"name": "llama3.2:3b", "source": "Ollama / LM Studio", "size": "2.0 GB", "vram_tier": "4GB+", "digest": "small"},
-            {"name": "deepseek-r1:latest", "source": "Ollama / LM Studio", "size": "9.0 GB", "vram_tier": "12GB~16GB", "digest": "reasoning"}
+            {"name": "deepseek-r1:14b", "source": "Ollama / LM Studio", "size": "9.0 GB", "vram_tier": "12GB~16GB", "digest": "reasoning"}
         ]
 
     def _infer_vram(self, name: str) -> str:
@@ -133,7 +134,7 @@ class LocalAIClient:
         """Stream tokens with backend auto-routing (Ollama vs LM Studio) + Semantic Cache."""
         last_user_query = messages[-1]["content"] if messages else ""
         
-        # 1. Dynamic Model Routing
+        # 1. Dynamic Model Routing & Fallback
         # Determine task complexity based on query length
         query_len = len(last_user_query)
         task_complexity = "complex" if query_len > 100 else "simple"
@@ -147,10 +148,14 @@ class LocalAIClient:
         except Exception:
             pass
         
-        resolved_model, tier, route_reason = model_router.route_task(
+        routed_model, tier, route_reason = model_router.route_task(
             task_complexity=task_complexity,
             available_vram_mb=available_vram_mb
         )
+        
+        # Prefer explicitly requested agent model; fallback to routed model or default qwen3.8-9b
+        resolved_model = model or routed_model or "qwen3.8-9b"
+        
         yield {
             "type": "routing_info",
             "content": f"⚡ [동적 라우팅] {resolved_model} ({tier.upper()} Tier) 할당 - {route_reason}"
@@ -194,15 +199,14 @@ class LocalAIClient:
         
         # Check if model belongs to LM Studio
         if backends["lm_studio"]:
+            lm_models = await self._get_lm_model_ids()
+            model_lower = (resolved_model or "").lower()
             if not backends["ollama"]:
                 use_lm_studio = True
-            elif "/" in resolved_model or "deepseek-v4" in resolved_model.lower() or "qwen3.5" in resolved_model.lower() or "bonsai" in resolved_model.lower() or "loaded" in resolved_model.lower():
+            elif resolved_model in lm_models or any(m.lower() == model_lower for m in lm_models):
                 use_lm_studio = True
-            else:
-                # Check against known LM Studio models
-                lm_models = await self._get_lm_model_ids()
-                if resolved_model in lm_models:
-                    use_lm_studio = True
+            elif "/" in model_lower or "deepseek-v4" in model_lower or "qwen3.8" in model_lower or "qwen3.5" in model_lower or "bonsai" in model_lower or "gemma-4" in model_lower or "loaded" in model_lower:
+                use_lm_studio = True
 
         if use_lm_studio:
             had_error = False

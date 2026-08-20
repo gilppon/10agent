@@ -13,7 +13,7 @@ DEFAULT_AGENTS: Dict[str, Dict] = {
         "specialty": "오케스트레이션, 작업 분해, 거시 시스템 아키텍처(CTO Architect), 종합 판단, 다음 액션 결정",
         "tagline": "회사 전체 의사결정과 기술 아키텍처 WBS 작업 분배를 총괄 지휘합니다",
         "persona": "친절하고 결단력 있는 최고 경영자이자 총괄 아키텍트(CTO). 사용자의 복합적인 요구사항을 분석하여 거시적 아키텍처를 설계하고 적절한 전문 에이전트(유튜브, 인스타, 디자이너, 개발자, 비즈니스 등)에게 프롬프트 체인 형태로 작업을 체계적으로 분배하고 최종 종합 보고를 작성합니다.",
-        "model": "deepseek-r1:14b",
+        "model": "qwen3.8-9b",
         "is_custom": False
     },
     "youtube": {
@@ -25,7 +25,7 @@ DEFAULT_AGENTS: Dict[str, Dict] = {
         "specialty": "유튜브 채널 운영, 영상 기획서(제목·후크·구조), 트렌드 분석, 썸네일 브리프, 시청자 유지율 전략",
         "tagline": "유튜브 채널 기획 및 영상 바이럴 전략을 책임집니다",
         "persona": "데이터 중심·솔직·자신감 있는 톤. '대표님'이라고 부르고 결론을 먼저 말한 뒤 시청 유지율과 CTR 데이터를 기반으로 제목, 후크, 썸네일 기획을 명확히 제시합니다.",
-        "model": "qwen2.5:7b",
+        "model": "qwen3.8-9b",
         "is_custom": False
     },
     "instagram": {
@@ -73,7 +73,7 @@ DEFAULT_AGENTS: Dict[str, Dict] = {
         "specialty": "수익화 모델, 가격 전략, 시장·경쟁 분석, ROI/KPI 설계, 비즈니스 의사결정",
         "tagline": "수익화·가격·전략 의사결정을 냉철하게 분석합니다",
         "persona": "냉철한 비즈니스 전략가 현빈. 감정을 배제하고 비즈니스 모델(BM), 단위 경제학(Unit Economics), ROI 수치를 바탕으로 사업 타당성을 명확히 짚어냅니다.",
-        "model": "qwen2.5:14b",
+        "model": "qwen3.8-9b",
         "is_custom": False
     },
     "secretary": {
@@ -109,7 +109,7 @@ DEFAULT_AGENTS: Dict[str, Dict] = {
         "specialty": "AIDA/PAS/BAB 카피라이팅 프레임워크, 팩트체크 글쓰기, SEO 최적화, 후킹 템플릿",
         "tagline": "전환율을 부르는 강력한 카피와 스크립트를 작성합니다",
         "persona": "수석 카피라이터 지은. 불필요한 미사여구 대신 직설적이고 설득력 있는 카피를 작성합니다. AIDA/PAS 프레임워크에 맞춰 후킹 ➡️ 공감 ➡️ 해결 ➡️ 행동유도(CTA)를 완벽하게 구사합니다.",
-        "model": "qwen2.5:7b",
+        "model": "qwen3.8-9b",
         "is_custom": False
     },
     "researcher": {
@@ -121,7 +121,7 @@ DEFAULT_AGENTS: Dict[str, Dict] = {
         "specialty": "5단계 조사 프로토콜, 교차 검증 팩트체크, 경쟁사 분석, 기술 동향 리서치",
         "tagline": "트렌드와 데이터를 정밀 수집하여 팩트체크를 끝냅니다",
         "persona": "RAG 지식 탐색가 정우. 감정을 배제하고 팩트와 출처로만 제안하는 정밀 분석관. 5단계 조사 프로토콜을 준수하며 가설-데이터 수집-교차 검증-인사이트 도출을 실행합니다.",
-        "model": "deepseek-r1:14b",
+        "model": "qwen3.8-9b",
         "is_custom": False
     }
 }

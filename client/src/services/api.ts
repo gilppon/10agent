@@ -341,7 +341,7 @@ export const api = {
   },
 
   streamRoundtable(
-    payload: { session_id: string; topic: string; agent_ids: string[] },
+    payload: { session_id: string; user_message: string },
     callbacks: {
       onEvent: (data: any) => void;
       onDone: () => void;
@@ -349,10 +349,16 @@ export const api = {
     }
   ) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-      callbacks.onError(new Error('원탁회의 세션 응답 시간(180초)이 초과되었습니다.'));
-    }, 180000);
+    let idleTimeoutId: any = null;
+    const resetIdleTimeout = () => {
+      if (idleTimeoutId) clearTimeout(idleTimeoutId);
+      idleTimeoutId = setTimeout(() => {
+        controller.abort();
+        callbacks.onError(new Error('원탁회의 세션 응답 대기 시간(180초)이 초과되었습니다.'));
+      }, 180000);
+    };
+
+    resetIdleTimeout();
 
     fetch(`${API_BASE}/roundtable/stream`, {
       method: 'POST',
@@ -370,6 +376,7 @@ export const api = {
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
+          resetIdleTimeout();
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n\n');
           buffer = lines.pop() || '';
@@ -397,7 +404,7 @@ export const api = {
         if (err.name !== 'AbortError') callbacks.onError(err);
       })
       .finally(() => {
-        clearTimeout(timeoutId);
+        if (idleTimeoutId) clearTimeout(idleTimeoutId);
       });
   },
 
@@ -410,10 +417,16 @@ export const api = {
     }
   ) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-      callbacks.onError(new Error('파이프라인 실행 시간(300초)이 초과되었습니다.'));
-    }, 300000);
+    let idleTimeoutId: any = null;
+    const resetIdleTimeout = () => {
+      if (idleTimeoutId) clearTimeout(idleTimeoutId);
+      idleTimeoutId = setTimeout(() => {
+        controller.abort();
+        callbacks.onError(new Error('파이프라인 응답 대기 시간(180초)이 초과되었습니다.'));
+      }, 180000);
+    };
+
+    resetIdleTimeout();
 
     fetch(`${API_BASE}/pipeline/stream`, {
       method: 'POST',
@@ -431,6 +444,7 @@ export const api = {
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
+          resetIdleTimeout();
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n\n');
           buffer = lines.pop() || '';
@@ -458,7 +472,7 @@ export const api = {
         if (err.name !== 'AbortError') callbacks.onError(err);
       })
       .finally(() => {
-        clearTimeout(timeoutId);
+        if (idleTimeoutId) clearTimeout(idleTimeoutId);
       });
   },
 };

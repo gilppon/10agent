@@ -154,25 +154,25 @@ class HardwareProfiler:
                         return m
             return model_names[0] if model_names else fallback
 
-        # 100-Point SOTA Golden Mapping Rules
+        # 100-Point SOTA Golden Mapping Rules (Qwen 3.8 공용 두뇌 최우선 지원)
         mapping = {
             # 🧠 기획/추론 계열 (CoT 논리 추론 및 사실 검증)
-            "ceo": find_best(["deepseek-r1:14b", "deepseek-r1:8b", "deepseek-r1:7b", "qwen2.5:14b", "qwen2.5:7b"], "qwen2.5:7b"),
-            "researcher": find_best(["deepseek-r1:14b", "deepseek-r1:8b", "deepseek-r1:7b", "qwen2.5:14b", "qwen2.5:7b"], "qwen2.5:7b"),
-            "business": find_best(["qwen2.5:14b", "deepseek-r1:14b", "deepseek-r1:8b", "qwen2.5:7b"], "qwen2.5:7b"),
+            "ceo": find_best(["qwen3.8-9b", "qwen3.8", "deepseek-r1:14b", "deepseek-r1:8b", "deepseek-r1:7b", "qwen2.5:14b", "qwen2.5:7b"], "qwen3.8-9b"),
+            "researcher": find_best(["qwen3.8-9b", "qwen3.8", "deepseek-r1:14b", "deepseek-r1:8b", "deepseek-r1:7b", "qwen2.5:14b", "qwen2.5:7b"], "qwen3.8-9b"),
+            "business": find_best(["qwen3.8-9b", "qwen3.8", "qwen2.5:14b", "deepseek-r1:14b", "deepseek-r1:8b", "qwen2.5:7b"], "qwen3.8-9b"),
 
             # 💻 코딩/시각 계열 (코드 및 Vision 멀티모달)
-            "developer": find_best(["qwen2.5-coder:14b", "qwen2.5-coder:7b", "qwen2.5-coder"], "qwen2.5-coder:14b"),
-            "designer": find_best(["qwen2.5vl:7b", "qwen2.5-coder:7b", "qwen2.5:7b"], "qwen2.5:7b"),
+            "developer": find_best(["qwen2.5-coder:14b", "qwen2.5-coder:7b", "qwen3.8-9b", "qwen2.5-coder"], "qwen2.5-coder:14b"),
+            "designer": find_best(["qwen2.5vl:7b", "qwen3.8-9b", "qwen2.5-coder:7b", "qwen2.5:7b"], "qwen2.5vl:7b"),
 
             # ✍️ 작문/마케팅/사운드 계열 (자연어 및 카피라이팅)
-            "writer": find_best(["qwen2.5:7b", "mistral-nemo", "llama3:8b"], "qwen2.5:7b"),
-            "youtube": find_best(["qwen2.5:7b", "mistral-nemo", "llama3:8b"], "qwen2.5:7b"),
-            "editor": find_best(["mistral-nemo", "qwen2.5:7b", "gemma2:9b"], "qwen2.5:7b"),
+            "writer": find_best(["qwen3.8-9b", "qwen3.8", "qwen2.5:7b", "mistral-nemo", "llama3:8b"], "qwen3.8-9b"),
+            "youtube": find_best(["qwen3.8-9b", "qwen3.8", "qwen2.5:7b", "mistral-nemo", "llama3:8b"], "qwen3.8-9b"),
+            "editor": find_best(["qwen3.8-9b", "mistral-nemo", "qwen2.5:7b", "gemma2:9b"], "qwen3.8-9b"),
 
             # ⚡ 초경량 비서/SNS 계열 (초당 60+ 토큰 속공)
-            "instagram": find_best(["llama3.2:3b", "qwen2.5:3b", "qwen2.5:7b"], "llama3.2:3b"),
-            "secretary": find_best(["llama3.2:3b", "qwen2.5:3b", "qwen2.5:7b"], "llama3.2:3b")
+            "instagram": find_best(["llama3.2:3b", "qwen2.5:3b", "qwen3.8-9b", "qwen2.5:7b"], "llama3.2:3b"),
+            "secretary": find_best(["llama3.2:3b", "qwen2.5:3b", "qwen3.8-9b", "qwen2.5:7b"], "llama3.2:3b")
         }
         return mapping
 

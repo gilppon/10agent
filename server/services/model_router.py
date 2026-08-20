@@ -5,8 +5,8 @@ class VRAMModelRouter:
     def __init__(self):
         self.model_tiers = {
             "small": ["llama3.2:3b", "qwen2.5:3b", "deepseek-coder:6.7b"],
-            "medium": ["llama3.2:7b", "qwen2.5:7b", "deepseek-r1:14b"],
-            "large": ["llama3.2:13b", "qwen2.5:14b", "mixtral-8x7b"]
+            "medium": ["qwen3.8-9b", "qwen2.5:7b", "deepseek-r1:14b"],
+            "large": ["qwen3.8-9b", "qwen2.5:14b", "qwen2.5-coder:14b"]
         }
 
     def route_task(self, task_complexity: str, available_vram_mb: int) -> Tuple[Optional[str], str, str]:
@@ -18,7 +18,7 @@ class VRAMModelRouter:
             available_vram_mb: 사용 가능한 VRAM (MB)
 
         Returns:
-            (추천 모델 이름, 모델 티어, 라우팅 사유) 또는 (None, "small", "VRAM 부족으로 시뮬레이션 모드")
+            (추천 모델 이름, 모델 티어, 라우팅 사유)
         """
         from server.services.model_router import get_model_tier
         small_models = self.model_tiers["small"]
@@ -29,19 +29,16 @@ class VRAMModelRouter:
         if available_vram_mb < 4096:  # < 4GB
             if task_complexity == "simple":
                 return small_models[0], tier, "간단한 작업: 가벼운 모델 라우팅"
-            return None, tier, "VRAM 부족(4GB 미만): 시뮬레이션 모드"
+            return small_models[0], tier, "VRAM 절약 모드: 소형 모델 라우팅"
         elif available_vram_mb < 8192:  # 4-8GB
             if task_complexity == "simple":
                 return small_models[0], tier, "간단한 작업: 가벼운 모델 라우팅"
-            elif task_complexity == "complex":
-                return None, tier, "복잡한 작업: VRAM 부족으로 시뮬레이션 모드"
-            else:
-                return medium_models[0], tier, "중간 복잡도: 미디움 모델 라우팅"
+            return medium_models[0], tier, "표준 작업: 공용 두뇌(qwen3.8-9b) 라우팅"
         else:  # 8GB+
             if task_complexity == "complex":
-                return large_models[0], tier, "복잡한 작업: 파워풀 모델 라우팅"
+                return large_models[0], tier, "복잡한 작업: 고성능 공용 두뇌(qwen3.8-9b) 라우팅"
             else:
-                return medium_models[0], tier, "일반 작업: 미디움 모델 라우팅"
+                return medium_models[0], tier, "일반 작업: 공용 두뇌(qwen3.8-9b) 라우팅"
 
     def get_model_tier(self, available_vram_mb: int) -> str:
         """

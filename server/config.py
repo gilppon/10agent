@@ -28,7 +28,7 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
 # Dynamic Model Tiers
 DEFAULT_SMALL_MODEL = os.getenv("DEFAULT_SMALL_MODEL", "llama3.2:3b")
-DEFAULT_MEDIUM_MODEL = os.getenv("DEFAULT_MEDIUM_MODEL", "qwen2.5:7b")
-DEFAULT_LARGE_MODEL = os.getenv("DEFAULT_LARGE_MODEL", "qwen2.5-coder:32b")
-DEFAULT_REASONING_MODEL = os.getenv("DEFAULT_REASONING_MODEL", "deepseek-r1:latest")
+DEFAULT_MEDIUM_MODEL = os.getenv("DEFAULT_MEDIUM_MODEL", "qwen3.8-9b")
+DEFAULT_LARGE_MODEL = os.getenv("DEFAULT_LARGE_MODEL", "qwen3.8-9b")
+DEFAULT_REASONING_MODEL = os.getenv("DEFAULT_REASONING_MODEL", "deepseek-r1:14b")
 
