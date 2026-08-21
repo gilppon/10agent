@@ -153,8 +153,8 @@ class LocalAIClient:
             available_vram_mb=available_vram_mb
         )
         
-        # Prefer explicitly requested agent model; fallback to routed model or default qwen3.8-9b
-        resolved_model = model or routed_model or "qwen3.8-9b"
+        # Prefer explicitly requested agent model; fallback to routed model or default qwen2.5-coder:7b
+        resolved_model = model or routed_model or "qwen2.5-coder:7b"
         
         yield {
             "type": "routing_info",
@@ -196,17 +196,31 @@ class LocalAIClient:
 
         # 4. Determine Target Backend (LM Studio vs Ollama)
         use_lm_studio = False
+        lm_models = []
         
-        # Check if model belongs to LM Studio
         if backends["lm_studio"]:
             lm_models = await self._get_lm_model_ids()
             model_lower = (resolved_model or "").lower()
-            if not backends["ollama"]:
-                use_lm_studio = True
-            elif resolved_model in lm_models or any(m.lower() == model_lower for m in lm_models):
-                use_lm_studio = True
-            elif "/" in model_lower or "deepseek-v4" in model_lower or "qwen3.8" in model_lower or "qwen3.5" in model_lower or "bonsai" in model_lower or "gemma-4" in model_lower or "loaded" in model_lower:
-                use_lm_studio = True
+            if len(lm_models) > 0:
+                if not backends["ollama"]:
+                    use_lm_studio = True
+                elif resolved_model in lm_models or any(m.lower() == model_lower for m in lm_models):
+                    use_lm_studio = True
+
+        # If Ollama is active, resolve best matching installed model if exact name missing
+        actual_ollama_model = resolved_model
+        if backends["ollama"] and not use_lm_studio:
+            installed = await self.list_models()
+            installed_names = [m["name"] for m in installed if m.get("backend") == "ollama"]
+            if actual_ollama_model not in installed_names and not any(actual_ollama_model in n for n in installed_names):
+                # Auto-fallback to best installed coder/general model
+                for pref in ["qwen2.5-coder:7b", "sovereign-master:7b", "qwen2.5:7b", "llama3.2:3b"]:
+                    if any(pref in n for n in installed_names):
+                        actual_ollama_model = pref
+                        break
+                else:
+                    if installed_names:
+                        actual_ollama_model = installed_names[0]
 
         if use_lm_studio:
             had_error = False
@@ -217,18 +231,18 @@ class LocalAIClient:
                     yield chunk
             # Fallback to Ollama if LM Studio failed and Ollama is alive
             if had_error and backends["ollama"]:
-                yield {"type": "token", "content": "\n⚠️ [LM Studio 오류로 Ollama 자동 폴백 중...]\n"}
-                async for chunk in self._stream_ollama(resolved_model, messages, system_prompt, tier, last_user_query):
+                yield {"type": "token", "content": f"\n⚠️ [LM Studio 로드 모델 부재 -> Ollama ({actual_ollama_model}) 자동 연결]\n"}
+                async for chunk in self._stream_ollama(actual_ollama_model, messages, system_prompt, tier, last_user_query):
                     yield chunk
         else:
             had_error = False
-            async for chunk in self._stream_ollama(resolved_model, messages, system_prompt, tier, last_user_query):
+            async for chunk in self._stream_ollama(actual_ollama_model, messages, system_prompt, tier, last_user_query):
                 if chunk["type"] == "token" and "❌ Ollama Error" in chunk["content"] and "not found" in chunk["content"].lower():
                     had_error = True
                 else:
                     yield chunk
-            # Fallback to LM Studio if Ollama model not found and LM Studio is alive
-            if had_error and backends["lm_studio"]:
+            # Fallback to LM Studio if Ollama model not found and LM Studio has models
+            if had_error and backends["lm_studio"] and len(lm_models) > 0:
                 yield {"type": "token", "content": "\n⚠️ [Ollama 모델 미발견으로 LM Studio 자동 폴백 중...]\n"}
                 async for chunk in self._stream_lm_studio(resolved_model, messages, system_prompt, tier, last_user_query):
                     yield chunk

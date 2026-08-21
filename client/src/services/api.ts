@@ -341,7 +341,7 @@ export const api = {
   },
 
   streamRoundtable(
-    payload: { session_id: string; user_message: string },
+    payload: { session_id: string; topic?: string; user_message?: string; agent_ids?: string[]; override_model?: string },
     callbacks: {
       onEvent: (data: any) => void;
       onDone: () => void;
@@ -475,4 +475,115 @@ export const api = {
         if (idleTimeoutId) clearTimeout(idleTimeoutId);
       });
   },
+
+  // 🧠 Brain Forge (4대 특화 두뇌 관제) API
+  async getBrainForgeStatus(): Promise<{
+    status: string;
+    brains: Array<{
+      id: string;
+      brain_name: string;
+      display_name: string;
+      base_model: string;
+      temperature: number;
+      assigned_agents: string[];
+      assigned_names: string[];
+      color: string;
+      icon: string;
+      mission: string;
+      is_custom_installed: boolean;
+      is_base_installed: boolean;
+      active_model: string;
+      status: string;
+      backend_available: boolean;
+    }>;
+  }> {
+    const res = await fetch(`${API_BASE}/brain-forge/status`);
+    return await res.json();
+  },
+
+  async buildCustomBrain(brainId: string, knowledgeSnippets?: string[]): Promise<{
+    success: boolean;
+    brain_id: string;
+    model_name: string;
+    message?: string;
+    error?: string;
+  }> {
+    const res = await fetch(`${API_BASE}/brain-forge/build/${brainId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ knowledge_snippets: knowledgeSnippets || [] }),
+    });
+    return await res.json();
+  },
+
+  async buildAllCustomBrains(): Promise<{
+    status: string;
+    results: Array<{
+      success: boolean;
+      brain_id: string;
+      model_name: string;
+      message?: string;
+      error?: string;
+    }>;
+  }> {
+    const res = await fetch(`${API_BASE}/brain-forge/build-all`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return await res.json();
+  },
+
+  // 🧬 물리적 가중치 병합(MergeKit SLERP) & 자율 진화 API
+  async getModelMergeStatus(): Promise<{
+    recipes: Array<{
+      brain_id: string;
+      recipe_file: string;
+      merge_method: string;
+      base_model: string;
+      model_a: string;
+      model_b: string;
+      ratio: string;
+      output_name: string;
+      quantization_target: string;
+      vram_estimate_gb: number;
+    }>;
+    jobs: Record<string, {
+      brain_id: string;
+      status: string;
+      progress: number;
+      current_step: string;
+      logs: string[];
+      output_gguf: string;
+      last_merged_at?: string;
+      evolution_version: string;
+      evolution_samples_count: number;
+    }>;
+    overall_status: string;
+  }> {
+    const res = await fetch(`${API_BASE}/model-merge/status`);
+    return await res.json();
+  },
+
+  async startModelMerge(brainId: string): Promise<{
+    status: string;
+    brain_id?: string;
+    message: string;
+    results?: any[];
+  }> {
+    const res = await fetch(`${API_BASE}/model-merge/start/${brainId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return await res.json();
+  },
+
+  async recordBrainEvolution(brainId: string, prompt: string, completion: string, score: number = 1.0): Promise<any> {
+    const res = await fetch(`${API_BASE}/model-merge/evolve/${brainId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, completion, score }),
+    });
+    return await res.json();
+  },
 };
+

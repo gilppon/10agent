@@ -87,6 +87,54 @@ export const KnowledgeNetworkModal: React.FC<KnowledgeNetworkModalProps> = ({ is
   const [autoScoutEnabled, setAutoScoutEnabled] = useState(true);
   const [lastScoutTime, setLastScoutTime] = useState<string | null>(null);
 
+  // 🧠 4대 특화 두뇌 진화 & 지식 주입 빌드 State
+  const [forgeBrains, setForgeBrains] = useState<any[]>([]);
+  const [buildingBrainId, setBuildingBrainId] = useState<string | null>(null);
+  const [isBuildingAllBrains, setIsBuildingAllBrains] = useState<boolean>(false);
+
+  const fetchForgeBrains = async () => {
+    try {
+      const res = await api.getBrainForgeStatus();
+      if (res.brains) setForgeBrains(res.brains);
+    } catch (e) {
+      console.error('Failed to fetch forge brains in modal:', e);
+    }
+  };
+
+  const handleBuildBrainInModal = async (brainId: string) => {
+    setBuildingBrainId(brainId);
+    try {
+      // 최근 지식 청크들을 스니펫으로 전달
+      const snippets = nodes.slice(0, 15).map(n => `[${n.category.toUpperCase()}] ${n.title}: ${n.chunk_preview.slice(0, 80)}`);
+      const res = await api.buildCustomBrain(brainId, snippets);
+      if (res.success) {
+        setToastMsg({ type: 'success', text: res.message || '🎉 특화 두뇌 지식 주입 및 빌드 성공!' });
+        await fetchForgeBrains();
+      } else {
+        setToastMsg({ type: 'error', text: `빌드 실패: ${res.error}` });
+      }
+    } catch (e: any) {
+      setToastMsg({ type: 'error', text: `빌드 오류: ${e.message}` });
+    } finally {
+      setBuildingBrainId(null);
+    }
+  };
+
+  const handleBuildAllBrainsInModal = async () => {
+    setIsBuildingAllBrains(true);
+    try {
+      const res = await api.buildAllCustomBrains();
+      if (res.status === 'success') {
+        setToastMsg({ type: 'success', text: `🎉 4대 특화 두뇌에 ${totalCount}개 축적 지식 영구 주입 및 일괄 진화 완료!` });
+        await fetchForgeBrains();
+      }
+    } catch (e: any) {
+      setToastMsg({ type: 'error', text: `일괄 진화 실패: ${e.message}` });
+    } finally {
+      setIsBuildingAllBrains(false);
+    }
+  };
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const fetchGraphData = async () => {
@@ -163,6 +211,7 @@ export const KnowledgeNetworkModal: React.FC<KnowledgeNetworkModalProps> = ({ is
   useEffect(() => {
     if (isOpen) {
       fetchGraphData();
+      fetchForgeBrains();
     }
   }, [isOpen]);
 
@@ -1098,10 +1147,129 @@ export const KnowledgeNetworkModal: React.FC<KnowledgeNetworkModalProps> = ({ is
           )}
 
           {/* ========================================================================= */}
-          {/* TAB 3: AI 진화 (지식 종합 승화 결과창) */}
+          {/* TAB 3: AI 진화 (지식 수집 ➡️ 두뇌 주입/진화 ➡️ 종합 승화 3단계) */}
           {/* ========================================================================= */}
           {activeTab === 'evolution' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+              {/* 🧠 [2단계 핵심] 4대 특화 두뇌로 축적 지식 416개 영구 주입 및 일괄 진화 빌드 */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
+                border: '1.5px solid rgba(6, 182, 212, 0.35)',
+                borderRadius: '16px',
+                padding: '22px 24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '20px' }}>🧠</span>
+                      <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                        4대 직군별 특화 두뇌에 {totalCount}개 축적 지식 영구 각인 & 진화
+                      </h3>
+                      <span style={{
+                        fontSize: '11px',
+                        background: '#06B6D4',
+                        color: '#000',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        fontWeight: 800
+                      }}>
+                        두뇌 가중치/헌법 주입
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0 }}>
+                      자율 스카우트와 웹 검색으로 축적된 <strong>{totalCount}개</strong>의 최신 도메인 지식을 4대 특화 두뇌의 Modelfile 헌법에 영구 결합하여 나만의 두뇌로 빌드합니다.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleBuildAllBrainsInModal}
+                    disabled={isBuildingAllBrains}
+                    style={{
+                      padding: '12px 22px',
+                      background: 'linear-gradient(135deg, #06B6D4 0%, #10B981 100%)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: '#000000',
+                      fontWeight: 800,
+                      fontSize: '13px',
+                      cursor: isBuildingAllBrains ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 16px rgba(6, 182, 212, 0.35)'
+                    }}
+                  >
+                    {isBuildingAllBrains ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    {isBuildingAllBrains ? '4대 두뇌에 지식 주입 및 빌드 중...' : `🚀 4대 특화 두뇌에 지식(${totalCount}개) 영구 주입 진화`}
+                  </button>
+                </div>
+
+                {/* 4대 두뇌 간편 현황 카드 */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '10px'
+                }}>
+                  {forgeBrains.map((b) => (
+                    <div
+                      key={b.id}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        border: `1px solid ${b.color}40`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: b.color }}>
+                          {b.display_name.split(' ')[0]}
+                        </span>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: b.is_custom_installed ? '#34D399' : '#FDE047'
+                        }}>
+                          {b.is_custom_installed ? '🟢 장착됨' : '⚡ 연동 준비'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#94A3B8', fontFamily: 'monospace' }}>
+                        Base: {b.base_model}
+                      </div>
+                      <button
+                        onClick={() => handleBuildBrainInModal(b.id)}
+                        disabled={buildingBrainId === b.id || isBuildingAllBrains}
+                        style={{
+                          marginTop: '4px',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          background: `rgba(${parseInt(b.color.slice(1,3), 16) || 16}, ${parseInt(b.color.slice(3,5), 16) || 185}, ${parseInt(b.color.slice(5,7), 16) || 129}, 0.2)`,
+                          border: `1px solid ${b.color}`,
+                          color: '#FFFFFF',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: (buildingBrainId === b.id || isBuildingAllBrains) ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Zap size={11} color={b.color} />
+                        {buildingBrainId === b.id ? '주입 빌드 중...' : '개별 지식 주입'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 🧬 [3단계] 지식 종합 승화 가이드북 집필 */}
               <div style={{
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid rgba(255, 255, 255, 0.06)',

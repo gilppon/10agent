@@ -16,6 +16,8 @@ from server.services.agent_manager import AgentManager
 from server.services.file_service import FileService
 from server.services.orchestrator import MultiAgentOrchestrator
 from server.services.telegram_service import telegram_service
+from server.services.brain_forge import brain_forge_service
+from server.services.model_merger import model_merger_service
 
 # Initialize Services
 ollama_client = OllamaClient()
@@ -388,7 +390,49 @@ async def update_integration(service_id: str, payload: dict):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-if __name__ == "__main__":
+# --- 🧠 Brain Forge (4대 직군별 특화 두뇌 관제) API ---
 
+@app.get("/api/brain-forge/status")
+async def get_brain_forge_status():
+    """4대 직군별 특화 두뇌의 설치 및 활성화 현황 반환"""
+    status = await brain_forge_service.get_brain_status()
+    return {"status": "success", "brains": status}
+
+@app.post("/api/brain-forge/build/{brain_id}")
+async def build_custom_brain(brain_id: str, payload: dict = None):
+    """특정 특화 두뇌 Modelfile 생성 및 Ollama/LM Studio 빌드"""
+    knowledge_snippets = payload.get("knowledge_snippets") if payload else None
+    res = await brain_forge_service.build_brain(brain_id, knowledge_snippets)
+    return res
+
+@app.post("/api/brain-forge/build-all")
+async def build_all_custom_brains():
+    """4대 특화 두뇌 전체 일괄 빌드"""
+    results = await brain_forge_service.build_all_brains()
+    return {"status": "success", "results": results}
+
+
+# --- 🧬 Physical Model Merge & Evolution (MergeKit SLERP & LoRA) API ---
+
+@app.get("/api/model-merge/status")
+async def get_model_merge_status():
+    """4대 두뇌 SLERP 레시피 정보 및 물리적 병합 진행률 조회"""
+    return model_merger_service.get_merge_status()
+
+@app.post("/api/model-merge/start/{brain_id}")
+async def start_model_merge(brain_id: str):
+    """지정된 두뇌 또는 전체(all) 물리적 가중치 병합(MergeKit) 및 Q5_K_M GGUF 빌드 시작"""
+    return await model_merger_service.start_merge_job(brain_id)
+
+@app.post("/api/model-merge/evolve/{brain_id}")
+async def record_brain_evolution(brain_id: str, payload: dict):
+    """사내 고품질 대화 및 작업 로그를 자율 진화(LoRA 파인튜닝) 데이터셋에 누적 기록"""
+    prompt = payload.get("prompt", "")
+    completion = payload.get("completion", "")
+    score = payload.get("score", 1.0)
+    return model_merger_service.record_evolution_sample(brain_id, prompt, completion, score)
+
+
+if __name__ == "__main__":
     import uvicorn
     uvicorn.run("server.main:app", host=HOST, port=PORT, reload=True)

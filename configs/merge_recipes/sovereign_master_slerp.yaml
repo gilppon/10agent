@@ -1,0 +1,30 @@
+# ==============================================================================
+# 👑 [단일 주권 마스터 두뇌] Sovereign-Master-7B SLERP 물리적 가중치 병합 레시피
+# [조합]: Qwen2.5-Coder-7B-Instruct (65%) + DeepSeek-R1-Distill-Qwen-7B (35%)
+# [특화]: 무결점 풀스택 코드 & TDD 무결성 디버깅 + CoT 심층 추론 (10대 에이전트 통합 두뇌)
+# [하드웨어]: RTX 4050 6GB VRAM 완벽 100% GPU 가속 (Q4_K_M 양자화 기준 ~4.3 GB)
+# ==============================================================================
+
+slices:
+  - sources:
+      - model: Qwen/Qwen2.5-Coder-7B-Instruct
+        layer_range: [0, 28]
+      - model: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+        layer_range: [0, 28]
+
+merge_method: slerp
+base_model: Qwen/Qwen2.5-Coder-7B-Instruct
+
+parameters:
+  t:
+    - filter: self_attn
+      value: [0.65, 0.35]
+    - filter: mlp
+      value: [0.65, 0.35]
+    - value: 0.65
+
+dtype: bfloat16
+tokenizer_source: base
+output_name: sovereign-master-7b
+quantization_target: Q4_K_M
+vram_estimate_gb: 4.3

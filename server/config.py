@@ -26,9 +26,8 @@ SEMANTIC_CACHE_ENABLED = os.getenv("SEMANTIC_CACHE_ENABLED", "true").lower() == 
 SEMANTIC_CACHE_THRESHOLD = float(os.getenv("SEMANTIC_CACHE_THRESHOLD", "0.92"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
-# Dynamic Model Tiers
-DEFAULT_SMALL_MODEL = os.getenv("DEFAULT_SMALL_MODEL", "llama3.2:3b")
-DEFAULT_MEDIUM_MODEL = os.getenv("DEFAULT_MEDIUM_MODEL", "qwen3.8-9b")
-DEFAULT_LARGE_MODEL = os.getenv("DEFAULT_LARGE_MODEL", "qwen3.8-9b")
-DEFAULT_REASONING_MODEL = os.getenv("DEFAULT_REASONING_MODEL", "deepseek-r1:14b")
-
+# Dynamic Model Tiers (RTX 4050 6GB Optimized)
+DEFAULT_SMALL_MODEL = os.getenv("DEFAULT_SMALL_MODEL", "qwen2.5-coder:7b")
+DEFAULT_MEDIUM_MODEL = os.getenv("DEFAULT_MEDIUM_MODEL", "qwen2.5-coder:7b")
+DEFAULT_LARGE_MODEL = os.getenv("DEFAULT_LARGE_MODEL", "qwen2.5-coder:7b")
+DEFAULT_REASONING_MODEL = os.getenv("DEFAULT_REASONING_MODEL", "qwen2.5-coder:7b")
