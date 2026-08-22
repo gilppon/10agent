@@ -75,5 +75,31 @@ async def init_db():
         """)
         await db.execute("CREATE INDEX IF NOT EXISTS idx_agent_knowledge_agent ON agent_knowledge(agent_id)")
 
+        # Desktop AI Growth Pet (DamaAI) Table
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS pet_status (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT DEFAULT '뽀삐',
+                pet_type TEXT DEFAULT 'dog',
+                level INTEGER DEFAULT 1,
+                exp INTEGER DEFAULT 0,
+                max_exp INTEGER DEFAULT 100,
+                affection INTEGER DEFAULT 50,
+                growth_stage TEXT DEFAULT 'infant',
+                total_fed_count INTEGER DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Ensure single default pet record exists
+        cursor = await db.execute("SELECT COUNT(*) FROM pet_status")
+        count = (await cursor.fetchone())[0]
+        if count == 0:
+            await db.execute("""
+                INSERT INTO pet_status (id, name, pet_type, level, exp, max_exp, affection, growth_stage, total_fed_count)
+                VALUES (1, '뽀삐', 'dog', 1, 0, 100, 50, 'infant', 0)
+            """)
+
         await db.commit()
+
 

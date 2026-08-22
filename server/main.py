@@ -21,6 +21,7 @@ from server.services.orchestrator import MultiAgentOrchestrator
 from server.services.telegram_service import telegram_service
 from server.services.brain_forge import brain_forge_service
 from server.services.model_merger import model_merger_service
+from server.routers.pet import router as pet_router
 
 # Initialize Services
 ollama_client = OllamaClient()
@@ -55,6 +56,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include DamaAI Desktop Pet Router
+app.include_router(pet_router)
 
 # --- Agent Management API ---
 

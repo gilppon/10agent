@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DamaAI-Pet",
+  "version": "0.1.0",
+  "identifier": "com.damaai.pet",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5174"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "DamaAI Pet",
+        "fullscreen": false,
+        "width": 320,
+        "height": 420,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "transparent": true,
+        "decorations": false,
+        "shadow": false
+      }
+    ]
+  }
+}

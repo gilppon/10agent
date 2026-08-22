@@ -38,3 +38,7 @@ server/*.db
 scratch/
 app_build/
 storage/artifacts/
+**/node_modules/
+**/dist/
+**/target/
+**/gen/

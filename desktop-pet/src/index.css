@@ -1,0 +1,125 @@
+:root {
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  font-family: var(--font-family);
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Scrollbar for Modal */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.7);
+}
+
+/* Natural Pet Breathing Animation */
+@keyframes petBreathe {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.02, 0.985) translateY(1.5px);
+  }
+}
+
+@keyframes eatingChew {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.06, 0.94) rotate(-2deg);
+  }
+  75% {
+    transform: scale(0.96, 1.04) rotate(2deg);
+  }
+}
+
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.pet-breathing {
+  animation: petBreathe 3.5s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.pet-eating {
+  animation: eatingChew 0.5s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.pet-shadow {
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35)) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+.speech-float {
+  animation: floatGentle 3s ease-in-out infinite;
+}
+
+.modal-pop {
+  animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Glassmorphic Utilities */
+.glass-bubble {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.glass-hud {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
