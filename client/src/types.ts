@@ -90,6 +90,15 @@ export interface ArtifactFile {
   category: 'code' | 'document' | 'media' | 'other';
 }
 
+export interface StandaloneTool {
+  name: string;
+  path: string;
+  has_main: boolean;
+  has_test: boolean;
+  has_ui: boolean;
+  modified_at: string;
+}
+
 export type ActiveTab = 'chat' | 'roundtable' | 'pipelines' | 'models' | 'workspace' | 'integrations';
 
 

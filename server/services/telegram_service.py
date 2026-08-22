@@ -181,7 +181,7 @@ class TelegramService:
         return await self.send_message("\n".join(msg_lines), reply_markup=reply_markup)
 
     async def execute_approved_idea_pipeline(self, idea_id: str, chat_id: str):
-        """Runs the 8-stage full_cycle pipeline in background and sends the results back to Telegram."""
+        """Runs the 10-stage full_cycle pipeline in background and sends the results back to Telegram."""
         target_idea = next((i for i in self.cached_scouted_ideas if i["id"] == idea_id), None)
         if not target_idea:
             # Fallback
@@ -194,8 +194,8 @@ class TelegramService:
         self.current_active_task = target_idea['title']
         await self.send_message(
             f"⚡ <b>[개발 착수 알림]</b>\n대표님께서 <b>'{target_idea['title']}'</b> 아이템을 승인하셨습니다!\n"
-            f"10대 에이전트 군단(정우 ➡️ CEO ➡️ 민희 ➡️ 코다리 ➡️ 레오 ➡️ 찬우 ➡️ 지은 ➡️ 현빈)이 "
-            f"<b>실제 소스코드 빌드 및 마케팅 8단계 일괄 완주</b>에 착수합니다. 잠시만 기다려 주십시오! 🫡"
+            f"10대 에이전트 군단(정우 ➡️ CEO ➡️ 민희 ➡️ 코다리 ➡️ 레오 ➡️ 루나 ➡️ 찬우 ➡️ 지은 ➡️ 현빈 ➡️ 영숙)이 "
+            f"<b>실제 소스코드 빌드 및 마케팅 10단계 일괄 완주</b>에 착수합니다. 잠시만 기다려 주십시오! 🫡"
         )
 
         from server.services.ollama_client import ollama_client
@@ -224,7 +224,7 @@ class TelegramService:
 
             # Completed! Send results
             done_msg = (
-                f"🏆 <b>[10대 에이전트 8단계 자율 개발 완주 보고]</b>\n\n"
+                f"🏆 <b>[10대 에이전트 10단계 자율 개발 완주 보고]</b>\n\n"
                 f"대표님! 승인하신 <b>'{target_idea['title']}'</b> 프로젝트의 실제 소스코드와 마케팅 패키지가 100% 완성되었습니다!\n\n"
                 f"📁 <b>물리 프로젝트 폴더</b>: <code>{final_project_dir}</code>\n"
                 f"📄 <b>산출물 파일</b>: <code>{final_artifact_name}</code>\n\n"

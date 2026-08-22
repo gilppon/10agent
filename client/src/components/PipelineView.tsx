@@ -20,7 +20,11 @@ import {
   Folder,
   Layers,
   MonitorPlay,
-  RotateCw
+  RotateCw,
+  Terminal,
+  Wrench,
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -32,16 +36,18 @@ const PIPELINES = [
   {
     id: 'full_cycle',
     title: '🚀 10대 에이전트 올인원 풀 라이프사이클 팩',
-    desc: '정우 심층 시장조사 ➡️ CEO 기획 ➡️ 민희 디자인 ➡️ 코다리 풀코드 ➡️ 레오 유튜브 ➡️ 찬우 인스타 ➡️ 지은 카피 ➡️ 현빈 BM 8단계 일괄 완주',
+    desc: '정우 심층 시장조사 ➡️ CEO 기획 ➡️ 민희 디자인 ➡️ 코다리 풀코드 ➡️ 레오 유튜브 ➡️ 루나 BGM ➡️ 찬우 인스타 ➡️ 지은 카피 ➡️ 현빈 BM ➡️ 영숙 경영진 브리핑 10단계 일괄 완주',
     stages: [
       '정우 (시장/경쟁사 리서치)',
       'CEO (제품 사양서)',
       '민희 (8px HSL 디자인)',
       '코다리 (풀 소스코드)',
       '레오 (유튜브 팩)',
+      '루나 (BGM 사운드)',
       '찬우 (인스타 릴스)',
       '지은 (세일즈 카피)',
-      '현빈 (SaaS 가격/BM)'
+      '현빈 (SaaS 가격/BM)',
+      '영숙 (경영진 브리핑)'
     ],
     color: '#10B981',
     placeholder: '예: 2026년 1인 창업자를 위한 AI 마케팅 자동화 SaaS 신제품 개발 및 수익화 올인원'
@@ -77,6 +83,20 @@ const PIPELINES = [
     stages: ['정우 (교차 팩트체크)', '현빈 (ROI/전략 분석)', '영숙 (경영진 브리핑)'],
     color: '#8B5CF6',
     placeholder: '예: 2026년 온디바이스(On-device) 로컬 AI 경량화 모델 시장 전망 및 경쟁사 동향'
+  },
+  {
+    id: 'tool_factory',
+    title: '🛠️ 독립형 툴 자율 팩토리 (Autonomous Tool Factory)',
+    desc: '리서치 ➡️ 모듈 아키텍처 설계 ➡️ 독립 Python 툴 풀코드 100% 자율 작성 ➡️ E:/진짜배기/ 에 독립 프로젝트 스캐폴딩 및 자가검증 완료',
+    stages: [
+      '정우 (라이브러리/데이터 리서치)',
+      'CEO (툴 아키텍처/모듈 설계)',
+      '코다리 (독립 툴 소스코드 완전 구현)',
+      '지은 (마케팅 템플릿/프롬프트 주입)',
+      '영숙 (원클릭 런처/README 패키징)'
+    ],
+    color: '#EC4899',
+    placeholder: '예: 네이버 및 구글 트렌드를 실시간 검색하여 유튜브/인스타 마케팅 팩을 생성하고 CSV/MD로 저장하는 독립형 자동화 툴'
   }
 ];
 
@@ -91,6 +111,10 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ sessionId }) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [projectDir, setProjectDir] = useState<string | null>(null);
   const [appFiles, setAppFiles] = useState<string[]>([]);
+  const [pipelineTypeCompleted, setPipelineTypeCompleted] = useState<string | null>(null);
+  const [toolName, setToolName] = useState<string | null>(null);
+  const [toolVerification, setToolVerification] = useState<any>(null);
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [dirCopied, setDirCopied] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
@@ -115,6 +139,10 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ sessionId }) => {
     setPreviewUrl(null);
     setProjectDir(null);
     setAppFiles([]);
+    setPipelineTypeCompleted(null);
+    setToolName(null);
+    setToolVerification(null);
+    setActionStatus(null);
 
     api.streamPipeline(
       { session_id: sessionId, pipeline_type: targetPipeline.id, prompt: targetPrompt.trim() },
@@ -135,9 +163,12 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ sessionId }) => {
           } else if (data.type === 'pipeline_complete') {
             setCompletedArtifact(data.artifact_name);
             setArtifactContent(data.artifact_content || Object.values(stageTokensRef.current).join('\n\n---\n\n'));
+            setPipelineTypeCompleted(data.pipeline_type || targetPipeline.id);
             if (data.preview_url) setPreviewUrl(data.preview_url);
             if (data.project_dir) setProjectDir(data.project_dir);
             if (data.files) setAppFiles(data.files);
+            if (data.tool_name) setToolName(data.tool_name);
+            if (data.verification) setToolVerification(data.verification);
           }
         },
         onDone: () => {
@@ -149,6 +180,45 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ sessionId }) => {
         }
       }
     );
+  };
+
+  const handleLaunchTool = async (mode: 'cli' | 'ui' = 'cli') => {
+    if (!projectDir) return;
+    try {
+      setActionStatus(`🚀 도구 (${mode.toUpperCase()}) 기동 중...`);
+      const res = await api.runStandaloneTool(projectDir, mode);
+      setActionStatus(`✅ ${res.message}`);
+      setTimeout(() => setActionStatus(null), 4000);
+    } catch (e: any) {
+      setActionStatus(`⚠️ 실행 실패: ${e.message}`);
+      setTimeout(() => setActionStatus(null), 4000);
+    }
+  };
+
+  const handleOpenFolder = async () => {
+    if (!projectDir) return;
+    try {
+      await api.openToolFolder(projectDir);
+      setActionStatus(`📂 Windows 탐색기에서 폴더를 열었습니다.`);
+      setTimeout(() => setActionStatus(null), 3000);
+    } catch (e: any) {
+      setActionStatus(`⚠️ 폴더 열기 실패: ${e.message}`);
+      setTimeout(() => setActionStatus(null), 3000);
+    }
+  };
+
+  const handleReTestTool = async () => {
+    if (!projectDir) return;
+    try {
+      setActionStatus(`🧪 자가 검증(test_tool.py) 실행 중...`);
+      const res = await api.testStandaloneTool(projectDir);
+      setToolVerification(res.result);
+      setActionStatus(res.result.message || '검증 완료');
+      setTimeout(() => setActionStatus(null), 4000);
+    } catch (e: any) {
+      setActionStatus(`⚠️ 자가 검증 실패: ${e.message}`);
+      setTimeout(() => setActionStatus(null), 4000);
+    }
   };
 
   const handleCopyArtifact = () => {
@@ -526,6 +596,237 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ sessionId }) => {
                   }}
                   sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* 🛠️ 독립형 툴 자율 팩토리 전용 컨트롤 패널 (Autonomous Tool Control Panel) */}
+          {(pipelineTypeCompleted === 'tool_factory' || toolName) && projectDir && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)',
+              border: '1.5px solid #EC4899',
+              borderRadius: '16px',
+              padding: '22px 26px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              boxShadow: '0 12px 36px rgba(236, 72, 153, 0.15)'
+            }}>
+              {/* Tool Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: '#EC4899',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#FFF',
+                    fontWeight: 800
+                  }}>
+                    <Wrench size={22} />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🛠️ 로컬 AI 독립형 툴 프로젝트 생성 완료 ({toolName || 'marketing_auto_tool'})
+                      <span style={{ fontSize: '11px', background: '#10B981', color: '#0F172A', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>
+                        배포 및 즉시 실행 가능
+                      </span>
+                    </h4>
+                    <span style={{ fontSize: '12px', color: '#CBD5E1' }}>
+                      10대 에이전트가 완제품 Python 소스코드 및 실행 배치파일을 물리 디렉토리에 구축했습니다.
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Feedback Badge */}
+                {actionStatus && (
+                  <div style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    border: '1px solid #EC4899',
+                    color: '#F472B6',
+                    fontSize: '12px',
+                    fontWeight: 700
+                  }}>
+                    {actionStatus}
+                  </div>
+                )}
+              </div>
+
+              {/* Physical Path & Files Box */}
+              <div style={{
+                background: 'rgba(0, 0, 0, 0.45)',
+                padding: '12px 18px',
+                borderRadius: '10px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.08)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                    <Folder size={16} color="#EC4899" />
+                    <span style={{ color: '#94A3B8' }}>물리 저장 위치:</span>
+                    <strong style={{ color: '#F8FAFC', fontFamily: 'monospace' }}>{projectDir}</strong>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={handleCopyDir}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid var(--border-glass)',
+                        color: '#FFF',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {dirCopied ? '복사 완료!' : '경로 복사'}
+                    </button>
+                    <button
+                      onClick={handleOpenFolder}
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: '6px',
+                        background: 'rgba(236, 72, 153, 0.25)',
+                        border: '1px solid #EC4899',
+                        color: '#F472B6',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Folder size={13} /> 📂 Windows 탐색기로 폴더 열기
+                    </button>
+                  </div>
+                </div>
+
+                {appFiles.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                    <span style={{ fontSize: '11px', color: '#94A3B8' }}>생성된 파일:</span>
+                    {appFiles.map((f, i) => (
+                      <span key={i} style={{
+                        fontSize: '11px',
+                        padding: '2px 8px',
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        borderRadius: '4px',
+                        color: f.endsWith('.bat') ? '#34D399' : f.endsWith('.py') ? '#60A5FA' : '#CBD5E1',
+                        fontFamily: 'monospace'
+                      }}>
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Verification Gate Result Card */}
+              {toolVerification && (
+                <div style={{
+                  background: toolVerification.is_valid ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                  border: toolVerification.is_valid ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '10px',
+                  padding: '12px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {toolVerification.is_valid ? (
+                      <ShieldCheck size={20} color="#10B981" />
+                    ) : (
+                      <AlertCircle size={20} color="#EF4444" />
+                    )}
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: toolVerification.is_valid ? '#34D399' : '#F87171' }}>
+                        {toolVerification.message || '자가 검증 완료'} (신뢰도 점수: {toolVerification.score}/100)
+                      </div>
+                      {toolVerification.output && (
+                        <div style={{ fontSize: '11px', color: '#94A3B8', fontFamily: 'monospace', marginTop: '2px', maxWidth: '600px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {toolVerification.output.trim()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleReTestTool}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid var(--border-glass)',
+                      color: '#FFF',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <RotateCw size={12} /> 검증 재실행
+                  </button>
+                </div>
+              )}
+
+              {/* 1-Click Launch Buttons */}
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleLaunchTool('cli')}
+                  style={{
+                    flex: 1,
+                    minWidth: '200px',
+                    padding: '12px 20px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)',
+                    border: 'none',
+                    color: '#FFF',
+                    fontSize: '14px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 14px rgba(236, 72, 153, 0.4)'
+                  }}
+                >
+                  <Terminal size={18} /> 🚀 툴 원클릭 실행 (CLI / main.py)
+                </button>
+
+                <button
+                  onClick={() => handleLaunchTool('ui')}
+                  style={{
+                    flex: 1,
+                    minWidth: '200px',
+                    padding: '12px 20px',
+                    borderRadius: '10px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(236, 72, 153, 0.5)',
+                    color: '#FFF',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <MonitorPlay size={18} color="#EC4899" /> 🌐 웹 UI 실행 (Streamlit / UI)
+                </button>
               </div>
             </div>
           )}

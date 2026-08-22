@@ -1,5 +1,8 @@
 import os
+import sys
 import uuid
+import subprocess
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -433,6 +436,59 @@ async def record_brain_evolution(brain_id: str, payload: dict):
     return model_merger_service.record_evolution_sample(brain_id, prompt, completion, score)
 
 
+# --- 🛠️ Autonomous Tools Management & Execution API ---
+
+@app.get("/api/tools")
+async def list_standalone_tools():
+    """E:/진짜배기/ 하위에 자율 생성된 독립형 툴 목록 조회"""
+    tools = file_service.list_standalone_tools()
+    return {"status": "success", "tools": tools}
+
+@app.post("/api/tools/run")
+async def run_standalone_tool(payload: dict):
+    """지정된 독립형 도구(CLI/Web UI) 백그라운드 프로세스 기동"""
+    tool_path = payload.get("tool_path")
+    mode = payload.get("mode", "cli")  # 'cli' or 'ui'
+    if not tool_path or not os.path.exists(tool_path):
+        raise HTTPException(status_code=404, detail="Tool directory not found")
+    
+    target_bat = "run_ui.bat" if mode == "ui" else "run_tool.bat"
+    bat_file = Path(tool_path) / target_bat
+    
+    if sys.platform == "win32":
+        # Launch independently in a new Windows terminal window
+        if bat_file.exists():
+            os.system(f'start cmd /c "cd /d {tool_path} && {target_bat}"')
+        else:
+            os.system(f'start cmd /c "cd /d {tool_path} && python main.py"')
+    else:
+        subprocess.Popen([sys.executable, "main.py"], cwd=tool_path)
+        
+    return {"status": "success", "message": f"Tool launched ({mode} mode)", "tool_path": tool_path}
+
+@app.post("/api/tools/open-folder")
+async def open_tool_folder(payload: dict):
+    """Windows 탐색기로 해당 툴 프로젝트 폴더 열기"""
+    tool_path = payload.get("tool_path")
+    if not tool_path or not os.path.exists(tool_path):
+        raise HTTPException(status_code=404, detail="Tool directory not found")
+    
+    if sys.platform == "win32":
+        os.system(f'explorer "{os.path.abspath(tool_path)}"')
+    return {"status": "success", "message": "Folder opened in Explorer", "tool_path": tool_path}
+
+@app.post("/api/tools/test")
+async def test_standalone_tool(payload: dict):
+    """해당 툴의 test_tool.py 자가검증 실행"""
+    tool_path = payload.get("tool_path")
+    if not tool_path or not os.path.exists(tool_path):
+        raise HTTPException(status_code=404, detail="Tool directory not found")
+    
+    result = file_service.verify_tool_installation(tool_path)
+    return {"status": "success", "result": result}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("server.main:app", host=HOST, port=PORT, reload=True)
+

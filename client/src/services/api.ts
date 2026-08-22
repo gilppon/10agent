@@ -1,4 +1,4 @@
-import { Agent, Message, Session, ModelInfo, ArtifactFile, HardwareProfile, KnowledgeItem, KnowledgePreset } from '../types';
+import { Agent, Message, Session, ModelInfo, ArtifactFile, HardwareProfile, KnowledgeItem, KnowledgePreset, StandaloneTool } from '../types';
 
 const API_BASE = '/api';
 
@@ -585,5 +585,38 @@ export const api = {
     });
     return await res.json();
   },
+
+  async getStandaloneTools(): Promise<{ status: string; tools: StandaloneTool[] }> {
+    const res = await fetch(`${API_BASE}/tools`);
+    return await res.json();
+  },
+
+  async runStandaloneTool(toolPath: string, mode: 'cli' | 'ui' = 'cli'): Promise<{ status: string; message: string; tool_path: string }> {
+    const res = await fetch(`${API_BASE}/tools/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tool_path: toolPath, mode }),
+    });
+    return await res.json();
+  },
+
+  async openToolFolder(toolPath: string): Promise<{ status: string; message: string; tool_path: string }> {
+    const res = await fetch(`${API_BASE}/tools/open-folder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tool_path: toolPath }),
+    });
+    return await res.json();
+  },
+
+  async testStandaloneTool(toolPath: string): Promise<{ status: string; result: any }> {
+    const res = await fetch(`${API_BASE}/tools/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tool_path: toolPath }),
+    });
+    return await res.json();
+  },
 };
+
 

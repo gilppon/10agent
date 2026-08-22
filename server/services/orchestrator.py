@@ -351,11 +351,13 @@ class MultiAgentOrchestrator:
                     {"agent_id": "researcher", "task": f"다음 아이템/주제에 대해 DuckDuckGo 실시간 검색을 통해 [최신 시장 트렌드, 경쟁사 분석, 타겟 니즈, 기술적 실현 가능성 팩트체크]를 심층 리서치하세요:\n주제: {prompt}"},
                     {"agent_id": "ceo", "task": "위 정우의 심층 시장 리서치를 바탕으로 [핵심 제품 정의, 필수 기능 명세, 시스템 아키텍처 로드맵]을 수립하세요."},
                     {"agent_id": "designer", "task": "위 기획 사양서에 맞춰 [8px 그리드 레이아웃, HSL 다크모드 컬러 팔레트, 모던 UI/UX 컴포넌트 가이드]를 설계하세요."},
-                    {"agent_id": "developer", "task": "위 기획 및 디자인 가이드를 기반으로 즉시 브라우저에서 실행 가능한 [HTML/CSS/JavaScript 또는 React 풀 소스코드]를 작성하세요."},
+                    {"agent_id": "developer", "task": "위 기획 및 디자인 가이드를 기반으로 즉시 브라우저에서 실행 가능한 완전 자립형 [단일 HTML/CSS/JavaScript 풀 소스코드]를 마크다운 ```html 코드 블록으로 100% 작성하세요."},
                     {"agent_id": "youtube", "task": "위 완성된 소프트웨어를 대중에게 폭발적으로 홍보할 [클릭율 200% 유튜브 제목 5종, 3초 골든 후크 스크립트, 썸네일 시각 브리프]를 작성하세요."},
-                    {"agent_id": "instagram", "task": "위 완성된 소프트웨어를 인스타그램에서 바이럴할 [릴스 숏폼 스크립트, 3-3-3 해시태그, 피드 카드뉴스 본문]을 작성하세요."},
-                    {"agent_id": "writer", "task": "위 소프트웨어의 랜딩페이지에 들어갈 [AIDA/PAS 기반 초고전환율 세일즈 카피 및 CTA 문구]를 작성하세요."},
-                    {"agent_id": "business", "task": "위 완성된 제품의 [월간 유료 구독 가격(Tier), Unit Economics, ROI 및 1인 SaaS 수익화 비즈니스 모델(BM)]을 최종 확정하세요."}
+                    {"agent_id": "editor", "task": "위 유튜브 기획서에 맞춰 영상 분위기를 극대화할 [추천 BGM 장르, 무드 아키텍처, BPM, 악기 구성, AI 음악 생성 프롬프트 3종]을 작성하세요."},
+                    {"agent_id": "instagram", "task": "위 완성된 소프트웨어를 인스타그램에서 바이럴할 [릴스 숏폼 스크립트, 3-3-3 해시태그 30종, 피드 카드뉴스 5장 본문]을 작성하세요."},
+                    {"agent_id": "writer", "task": "위 소프트웨어의 랜딩페이지에 들어갈 [AIDA/PAS 기반 초고전환율 세일즈 카피 및 결제 유도 CTA 문구]를 작성하세요."},
+                    {"agent_id": "business", "task": "위 완성된 제품의 [월간/연간 유료 구독 요금제 티어(Free/Pro/Enterprise), CAC/LTV Unit Economics, ROI 및 1인 SaaS 수익화 BM 로드맵]을 최종 확정하세요."},
+                    {"agent_id": "secretary", "task": "10대 에이전트의 모든 산출물을 총괄 검수하고 [1분 경영진 데일리 브리핑(핵심 불릿 5개), 전체 WBS 실행 액션 아이템]으로 최종 패키징하세요."}
                 ],
                 "artifact_name": f"Full_Lifecycle_Pack_{uuid.uuid4().hex[:6]}.md"
             },
@@ -394,6 +396,17 @@ class MultiAgentOrchestrator:
                     {"agent_id": "secretary", "task": "전체 리서치와 비즈니스 분석 내용을 [1분 경영진 데일리 브리핑(핵심 불릿 5개 + 액션 아이템)]으로 깔끔하게 요약하세요."}
                 ],
                 "artifact_name": f"Research_Report_{uuid.uuid4().hex[:6]}.md"
+            },
+            "tool_factory": {
+                "title": "🛠️ 로컬 AI 독립형 툴 자율 팩토리",
+                "stages": [
+                    {"agent_id": "researcher", "task": f"다음 도구/자동화 프로그램 요구사항에 대해 필요한 핵심 Python 라이브러리, 데이터 소스(DuckDuckGo 등), 구현 기술을 심층 리서치하세요:\n도구 요구사항: {prompt}"},
+                    {"agent_id": "ceo", "task": "위 리서치를 바탕으로 생성할 독립 실행형 툴의 [시스템 아키텍처, 디렉토리 구조, 모듈별(services/*.py) 역할, requirements.txt 라이브러리 목록] 명세서를 수립하세요."},
+                    {"agent_id": "developer", "task": "위 명세에 따라 실제 독립 실행 가능한 완제품 Python 코드를 각 파일별로 완전하게 작성하십시오. 반드시 아래의 '### FILE: 파일경로' 포맷을 지켜주십시오:\n\n```python ### FILE: main.py\n# 메인 실행 코드\n```\n\n```python ### FILE: services/trend_search.py\n# 트렌드 검색 모듈\n```\n\n```python ### FILE: services/marketing_ai.py\n# AI 생성 모듈\n```\n\n```python ### FILE: services/exporter.py\n# 파일 저장 모듈\n```\n\n```python ### FILE: test_tool.py\n# 자가 검증 테스트 코드\n```\n\n```text ### FILE: requirements.txt\n# 의존성 패키지\n```"},
+                    {"agent_id": "writer", "task": "위 도구에 내장할 고품질 마케팅 프롬프트 템플릿, AIDA 세일즈 카피 프리셋, 그리고 사용자 설명서(README) 요약을 작성하세요."},
+                    {"agent_id": "secretary", "task": "전체 도구 구성 파일을 총괄 검수하고, Windows 원클릭 실행(run_tool.bat) 안내 및 최종 완료 요약을 패키징하세요."}
+                ],
+                "artifact_name": f"Autonomous_Tool_{uuid.uuid4().hex[:6]}.md"
             }
         }
 
@@ -437,6 +450,16 @@ class MultiAgentOrchestrator:
                 strict_role_guideline = (
                     "🚨 [비즈니스 전담 엄격 지침]: 오직 [1. 월간/연간 유료 구독 요금제 티어(Free/Pro/Enterprise)], "
                     "[2. CAC, LTV, Unit Economics 손익분기점], [3. 1인 SaaS 수익화 실행 로드맵]만 100% 온전하게 작성하십시오."
+                )
+            elif agent.id == "editor":
+                strict_role_guideline = (
+                    "🚨 [사운드 디렉터 전담 엄격 지침]: 오직 [1. 추천 BGM 장르 및 무드 아키텍처], "
+                    "[2. 권장 BPM 및 악기 구성], [3. Suno/Udio용 AI 음악 생성 프롬프트 3종]만 100% 온전하게 작성하십시오."
+                )
+            elif agent.id == "secretary":
+                strict_role_guideline = (
+                    "🚨 [총괄 비서 전담 엄격 지침]: 오직 [1. 10대 에이전트 종합 검수 의견], "
+                    "[2. 1분 경영진 데일리 브리핑 (핵심 5대 요약)], [3. 즉시 실행 가능한 WBS 로드맵 & 액션 아이템]만 100% 온전하게 작성하십시오."
                 )
             elif agent.id == "designer":
                 strict_role_guideline = (
@@ -490,14 +513,29 @@ class MultiAgentOrchestrator:
         # Save output to workspace artifact
         artifact_path = self.file_svc.save_artifact(config["artifact_name"], accumulated_output)
         
-        # 📁 Physical App Scaffolding: Create real project files in app_build/{app_id}/
-        app_id = f"app_{uuid.uuid4().hex[:6]}"
-        scaffold_res = self.file_svc.scaffold_app_project(
-            app_id=app_id,
-            full_markdown=accumulated_output,
-            title=f"{config['title']} - {prompt[:20]}"
-        )
+        # 📁 Physical Scaffolding Branch
+        if pipeline_type == "tool_factory":
+            # Extract tool name from prompt or fallback
+            tool_name_slug = re.sub(r'[^a-zA-Z0-9_\-]', '', prompt[:25].strip().lower().replace(" ", "_"))
+            if not tool_name_slug or len(tool_name_slug) < 3:
+                tool_name_slug = "marketing_auto_tool"
+                
+            tool_scaffold_res = self.file_svc.scaffold_standalone_tool(
+                tool_name=tool_name_slug,
+                full_markdown=accumulated_output,
+                title=f"{config['title']} ({prompt[:20]})"
+            )
 
-        yield f"data: {json.dumps({'type': 'pipeline_complete', 'artifact_path': artifact_path, 'artifact_name': config['artifact_name'], 'artifact_content': accumulated_output, 'app_id': app_id, 'preview_url': f'/api/apps/preview/{app_id}', 'project_dir': scaffold_res['project_dir'], 'files': scaffold_res['files']})}\n\n"
+            yield f"data: {json.dumps({'type': 'pipeline_complete', 'pipeline_type': 'tool_factory', 'artifact_path': artifact_path, 'artifact_name': config['artifact_name'], 'artifact_content': accumulated_output, 'tool_name': tool_scaffold_res['tool_name'], 'project_dir': tool_scaffold_res['project_dir'], 'files': tool_scaffold_res['files'], 'verification': tool_scaffold_res['verification']})}\n\n"
+        else:
+            # 📁 Physical App Scaffolding: Create real project files in app_build/{app_id}/
+            app_id = f"app_{uuid.uuid4().hex[:6]}"
+            scaffold_res = self.file_svc.scaffold_app_project(
+                app_id=app_id,
+                full_markdown=accumulated_output,
+                title=f"{config['title']} - {prompt[:20]}"
+            )
+
+            yield f"data: {json.dumps({'type': 'pipeline_complete', 'pipeline_type': pipeline_type, 'artifact_path': artifact_path, 'artifact_name': config['artifact_name'], 'artifact_content': accumulated_output, 'app_id': app_id, 'preview_url': f'/api/apps/preview/{app_id}', 'project_dir': scaffold_res['project_dir'], 'files': scaffold_res['files']})}\n\n"
 
 
